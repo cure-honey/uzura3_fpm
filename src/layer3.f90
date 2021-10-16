@@ -101,13 +101,13 @@ contains
                 ibit2 = ibit - iused_bits
                 ! debug info
                 ntable (side_info%sub(igranule, ichannel)%itable_select(1)) = &
-                ntable (side_info%sub(igranule, ichannel)%itable_select(1)) + 1
-                ntable (side_info%sub(igranule, ichannel)%itable_select(2)) = &
-                ntable (side_info%sub(igranule, ichannel)%itable_select(2)) + 1
+                    ntable (side_info%sub(igranule, ichannel)%itable_select(1)) + 1
+                ntable (side_info%sub(igranule, ichannel)%itable_select(2)) = & 
+                    ntable (side_info%sub(igranule, ichannel)%itable_select(2)) + 1
                 ntable (side_info%sub(igranule, ichannel)%itable_select(3)) = &
-                ntable (side_info%sub(igranule, ichannel)%itable_select(3)) + 1
+                    ntable (side_info%sub(igranule, ichannel)%itable_select(3)) + 1
                 ntab_ab(side_info%sub(igranule, ichannel)%icount1table_select) = &
-                ntab_ab(side_info%sub(igranule, ichannel)%icount1table_select) + 1
+                    ntab_ab(side_info%sub(igranule, ichannel)%icount1table_select) + 1
             end do
         end do
         ianc = max_bits - nused_bits

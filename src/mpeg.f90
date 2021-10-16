@@ -27,8 +27,8 @@ module mod_mpg
     character (len = 3) :: mpeg_layer_names(3)     = (/'iii', 'ii ', 'i  '/)                             ! iso 2.4.2.3 layer
     character (len = 7) :: mpeg_version_names(0:3) = (/'mpeg2.5', '       ', 'mpeg-ii', 'mpeg-i '/)      ! iso 2.4.2.3 id ! mpeg2.5 non-standard 
     character (len = 7) :: mpeg_demp_names(4)      = (/'none   ', '50/15us', '       ', 'citt   '/)      ! iso 2.4.2.3 emphasis
-    !-------------------------------------------------------------------------------------------
-    !mpeg1 / layer3:   iso 2.4.1.7, 2.4.2.7 
+!-------------------------------------------------------------------------------------------
+!mpeg1 / layer3:   iso 2.4.1.7, 2.4.2.7 
     type :: side_info_sub
         integer :: ipart2_3_length        ! 12 bits
         integer :: ibig_values            !  9 bits
@@ -63,7 +63,7 @@ module mod_mpg
              reshape( (/ 0, 0, 0, 0, 3, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, &
                          0, 1, 2, 3, 0, 1, 2, 3, 1, 2, 3, 1, 2, 3, 2, 3  /), (/16, 2/) )
     integer, save :: iscalefactorband_l(0:20, 3), iscalefactorband_s(0:11, 3) ! public
-    !-------------------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------------------
     !global variables
     !debug variables
     real (kind = 8), save :: tot_sc_l(0:20) = 0.0d0, tot_sc_s(0:11, 3) = 0.0d0

@@ -5,7 +5,7 @@ module mod_mdct
     real (kind = 8):: pi
     integer :: indx9(9)
     complex (kind = 8), save:: omega9(0:8), omega9s(9), sqrt3_2, omega3(0:2), omega3s(3)
-    real(kind = 8), parameter:: c(0:7)=(/-0.6000d0, -0.5350d0, -0.3300d0, -0.1850d0, -0.0950d0, -0.0410d0, -0.0142d0, -0.0037d0/)
+    real(kind = 8), parameter::c(0:7) = [-0.6000d0, -0.5350d0, -0.3300d0, -0.1850d0, -0.0950d0, -0.0410d0, -0.0142d0, -0.0037d0]
     real(kind = 8), save :: ca(0:7), cs(0:7), window_n(36), window_s(12), window_start(36), window_stop(36)
     real(kind = 8), save, allocatable :: subbuff(:, :, :)
 contains
@@ -53,7 +53,7 @@ contains
         subbuff(2:32:2, 20:54:2, :) = -subbuff(2:32:2, 20:54:2, :) ! iso figure a.4 layer iii decoder diagram
                                                  !    ~~~~~~~~~~~~ not written in the text but only in figure 
     end subroutine cp_subband
-    !--------------------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------------
     subroutine sub_mdct(subband, r_mdct, mblock_type, q_alias)
         real (kind = 8), intent(in ) :: subband(:, :, :)
         real (kind = 8), intent(out) :: r_mdct (:, :, :, :)

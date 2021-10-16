@@ -71,13 +71,13 @@ contains
     end subroutine put_bits_dim2
 !-------------------------------------------------------------------
     subroutine put_bits_c(str)
-    character (len = *) :: str
-    integer :: i
-    do i = 1, len_trim(str)
-     if (str(i:i) /= '0' .and. str(i:i) /= '1') call abort('invalid string: subroutine put_bit_c')
-     bit_string(ip:ip) = str(i:i)
-     ip = ip + 1
-    end do
+        character (len = *) :: str
+        integer :: i
+        do i = 1, len_trim(str)
+            if (str(i:i) /= '0' .and. str(i:i) /= '1') call abort('invalid string: subroutine put_bit_c')
+            bit_string(ip:ip) = str(i:i)
+            ip = ip + 1
+        end do
     end subroutine put_bits_c
 !-------------------------------------------------------------------
     subroutine write_bits_1frame(n)

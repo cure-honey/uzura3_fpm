@@ -477,42 +477,22 @@ contains
         real (kind = 8), intent(in ) :: zl(:)
         real (kind = 8), intent(out) :: xth(:, :)
         integer :: i, iband
-        do iband = 1, 32
-            do i = 1, 18
-                xth(iband, i) = zl(18 * (iband - 1) + i)
-            end do
-        end do
+        forall(iband = 1:32, i = 1:18) xth(iband, i) = zl(18 * (iband - 1) + i)
     end subroutine deorder_l
 !------------------------------------------------------------------------------------------------
     subroutine deorder_s(zs, xth)
         real (kind = 8), intent(in ) :: zs(:, :)
         real (kind = 8), intent(out) :: xth(:, :)
         integer :: i, iwin, iband
-        do iband = 1, 32
-            do iwin = 1, 3 
-                do i = 1, 6
-                    xth(iband, 6 * (iwin - 1) + i) = zs(6 * (iband - 1) + i, iwin) 
-                end do
-            end do  
-        end do
+        forall(iband = 1:32, iwin = 1:3, i = 1:6) xth(iband, 6 * (iwin - 1) + i) = zs(6 * (iband - 1) + i, iwin) 
     end subroutine deorder_s
 !------------------------------------------------------------------------------------------------
     subroutine deorder_m(zl, zs, xth)
         real (kind = 8), intent(in ) :: zl(:), zs(:, :)
         real (kind = 8), intent(out) :: xth(:, :)
         integer :: i, iwin, iband
-        do iband = 1, 2
-            do i = 1, 18
-                xth(iband, i) = zl( 18 * (iband - 1) + i)
-            end do
-        end do
-        do iband = 3, 32
-            do iwin = 1, 3 
-                do i = 1, 6
-                    xth(iband, 6 * (iwin - 1) + i) = zs(6 * (iband - 1) + i, iwin) 
-                end do
-            end do  
-        end do
+        forall(iband = 1:2, i = 1:18) xth(iband, i) = zl( 18 * (iband - 1) + i)
+        forall(iband = 3:32, iwin = 1:3, i = 1:6) xth(iband, 6 * (iwin - 1) + i) = zs(6 * (iband - 1) + i, iwin) 
     end subroutine deorder_m
  !------------------------------------------------------------------------------------------------
     function bark(f) result(res)

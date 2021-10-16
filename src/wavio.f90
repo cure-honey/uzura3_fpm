@@ -37,7 +37,7 @@ module wav_io
     end type riff_chunk
     !
 contains
-    !--------------------------------------------------------------------
+!--------------------------------------------------------------------
     subroutine init_chunk_names(riff)
         type (riff_chunk), intent(out) :: riff
         riff%chunk_id     = 'RIFF'
@@ -46,41 +46,41 @@ contains
         riff%fct%chunk_id = 'fact'
         riff%dat%chunk_id = 'data'
     end subroutine init_chunk_names
-    !---------------------------------------------------------------------
+!---------------------------------------------------------------------
     function word32() result(res)
         character (len = 4) :: res
         integer :: io
         read(ir, iostat = io) res
     end function word32
-    !---------------------------------------------------------------------
+!---------------------------------------------------------------------
     function word16() result(res)
         character (len = 2) :: res
         integer :: io
         read(ir, iostat = io) res
     end function word16
-    !---------------------------------------------------------------------
+!---------------------------------------------------------------------
     function word8() result(res)
         character (len = 1) :: res
         integer :: io
         read(ir, iostat = io) res
     end function word8
-    !---------------------------------------------------------------------
+!---------------------------------------------------------------------
     function int32() result(ires)
         integer (kind = 4) :: ires
         ires = transfer(word32(), ires) ! little endian assumed
     end function int32
-    !---------------------------------------------------------------------
+!---------------------------------------------------------------------
     function int16() result(ires)
         integer (kind = 2) :: ires
         ires = transfer(word16(), ires) ! little endian assumed
     end function int16
-    !---------------------------------------------------------------------
+!---------------------------------------------------------------------
     subroutine abort(text)
         character (len = *), intent(in) :: text
         write(*, *) 'abort:: ', text
         stop
     end subroutine abort
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine open_wav_file(iread, fname)
         integer            , intent(in    ) :: iread
         character (len = *), intent(in    ) :: fname
@@ -92,11 +92,11 @@ contains
             call abort('check input file! suggestion: is file name correct?')
         end if
     end subroutine open_wav_file
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine close_wav_file
         close(ir)
     end subroutine close_wav_file
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine check_riff_chunk(riff)
         type (riff_chunk), intent(in out) :: riff
         call init_chunk_names(riff)
@@ -115,7 +115,7 @@ contains
         call check_fmt_chunk(riff%fmt)
         call check_dat_chunk(riff%dat, riff%fct)
     end subroutine check_riff_chunk
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine check_fmt_chunk(fmt)
         type (fmt_chunk), intent(in out) :: fmt
         if ( word32() /= fmt%chunk_id ) call abort('cannot find format chunk!')
@@ -140,7 +140,7 @@ contains
             call abort('wave channel must be 1 or 2!')
         end select
     end subroutine check_fmt_chunk
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine check_dat_chunk(dat, fct)
         type (data_chunk), intent(in out) :: dat
         type (fact_chunk), intent(in out) :: fct
@@ -208,16 +208,16 @@ contains
             call abort('i/o error occurred while reading wav file.')
         end select
     end subroutine wav_read_sub
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine read_pcm_1frame(pcm)
         real (kind = 8), intent(out) :: pcm(:, :)
         pcm = eoshift(pcm, 1152, 0.0d0, 1)
         call wav_read(pcm(481:1632, :))
     end subroutine read_pcm_1frame
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine read_pcm0(pcm)
         real (kind = 8), intent(out) :: pcm(:, :)
         call wav_read(pcm(1153:1632, :))
     end subroutine read_pcm0
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
 end module wav_io
