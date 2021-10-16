@@ -16,14 +16,14 @@ contains
         buffer = ''
         iarg = 0
         narg = command_argument_count()
-        if (narg == 1) then 
+        if (narg == 0) then 
            call print_option()
            stop
         end if 
         do
             iarg = iarg + 1
-            if (iarg >= narg) call option_error( trim(buffer) )
-            call getarg(iarg, buffer)
+            if (iarg > narg) call option_error( trim(buffer) )
+            call get_command_argument(iarg, buffer)
             if (buffer(1:1) /= '-') exit  
             select case(trim(buffer))
             case ('-b') 

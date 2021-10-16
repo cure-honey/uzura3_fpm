@@ -22,7 +22,7 @@ contains
         character (len = *) :: fname
         integer :: io
         iw = iwrite
-        open(iw, file = fname, iostat = io, status = 'unknown', access= 'stream') 
+        open(iw, file = fname, iostat = io, status = 'unknown', access = 'stream') 
         if (io /= 0) then
             write(*, '(a, i3, a, i3, 2a)') ' i/o error ', io, ' occuerred. file =', iw, ' file name ', fname
             call abort('check output file! suggestion: file may be in use.')
@@ -94,7 +94,7 @@ contains
                 if (ipos > len(bit_string)) exit
                 if (bit_string(ipos:ipos) == '1') m = m + 2**(8 - j)
             end do
-            write(iw, '(a1)', advance = 'no') cm(1:1)   ! little endian assumed
+            write(iw) cm(1:1)   ! little endian assumed
         end do
     end subroutine write_bits_1frame
 !-------------------------------------------------------------------

@@ -40,29 +40,29 @@ contains
     !--------------------------------------------------------------------
     subroutine init_chunk_names(riff)
         type (riff_chunk), intent(out) :: riff
-        riff%chunk_id     = 'riff'
-        riff%format_type  = 'wave'
+        riff%chunk_id     = 'RIFF'
+        riff%format_type  = 'WAVE'
         riff%fmt%chunk_id = 'fmt '
-        riff%fct%chunk_id = 'fact '
+        riff%fct%chunk_id = 'fact'
         riff%dat%chunk_id = 'data'
     end subroutine init_chunk_names
     !---------------------------------------------------------------------
     function word32() result(res)
         character (len = 4) :: res
         integer :: io
-        read(ir, '(a4)', iostat = io) res
+        read(ir, iostat = io) res
     end function word32
     !---------------------------------------------------------------------
     function word16() result(res)
         character (len = 2) :: res
         integer :: io
-        read(ir, '(a2)', iostat = io) res
+        read(ir, iostat = io) res
     end function word16
     !---------------------------------------------------------------------
     function word8() result(res)
         character (len = 1) :: res
         integer :: io
-        read(ir, '(a1)', iostat = io) res
+        read(ir, iostat = io) res
     end function word8
     !---------------------------------------------------------------------
     function int32() result(ires)
@@ -86,7 +86,7 @@ contains
         character (len = *), intent(in    ) :: fname
         integer :: io
         ir = iread
-        open(ir, file = fname, status = 'old', iostat = io, access = 'stream') !non-standard  recordtype "stream"
+        open(ir, file = fname, status = 'old', iostat = io, access = 'stream') 
         if (io /= 0) then
             write(*, '(a, i3, a, i3, 2a)' ) ' i/o error ', io, ' occuerred. file =', iread, ' file name ', fname
             call abort('check input file! suggestion: is file name correct?')
@@ -174,7 +174,7 @@ contains
         ndat     = size(pcm, 1)
         nchannel = size(pcm, 2)
         if (ndat * nchannel > maxbuff) call abort('check maxbuff: subroutine wav_get')
-        ibuff16 =0
+        ibuff16 = 0
         select case (nchannel)
         case (1) !mono
             call wav_read_sub( cbuff16(1:ndat) )
@@ -196,7 +196,7 @@ contains
     subroutine wav_read_sub(cha16)
         character (len = 2), intent(out) :: cha16(:)
         integer :: io
-        read(ir, '(a2)', iostat = io) cha16
+        read(ir, iostat = io) cha16
         select case (io)
         case (0)
             continue
