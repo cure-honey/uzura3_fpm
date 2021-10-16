@@ -1,0 +1,12 @@
+name = "uzura3_fpm"
+version = "0.1.0"
+license = "MIT"
+author = "cure honey"
+maintainer = "curerice2014@gmail.com"
+copyright = "Copyright 2021, cure honey"
+[build]
+auto-executables = true
+auto-tests = true
+auto-examples = true
+[install]
+library = false
