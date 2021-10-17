@@ -70,7 +70,7 @@ program uzura3
     call print_debug_info()
     stop
 contains
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine print_debug_info()
         if (q_info) then
             print '(a)', ' ======== info ==============================================================='
@@ -95,7 +95,7 @@ contains
             print '(a)', ' ======== info ==============================================================='
         end if
     end subroutine print_debug_info
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine sample_rate(riff, mpg)
         type (riff_chunk     ), intent(in ) :: riff
         type (mpeg_parameters), intent(out) :: mpg
@@ -111,7 +111,7 @@ contains
             stop 'abnormal end'
         end select
     end subroutine sample_rate
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine play_time(riff)
         type (riff_chunk), intent(in) :: riff
         integer :: itot_time, ihour, imin, isec
@@ -122,13 +122,13 @@ contains
         write(*, '(a, i3, a, i2, a, i2)') ' playtime ', ihour, ':', imin, ':', isec
         write(*, *)
     end subroutine play_time
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine pr_info(mpg)
         type (mpeg_parameters), intent(in) :: mpg
         write(*, *) 'uzura3 (mp3 encoder/fortran90) ver.0.5b (c) h.o. psychoacoustic model enoken'
         if (mpg%icrc == 0) write(*, *) 'crc16 error protection enabled'
     end subroutine pr_info
-    !------------------------------------------------------------------
+!------------------------------------------------------------------
     subroutine update_status(iframe, itot_frames)
         integer, intent(in) :: iframe, itot_frames
         integer :: it(8), ielapsed, iel_min, iel_sec
@@ -150,5 +150,5 @@ contains
               it(1), '/', it(2), '/', it(3), ' ', it(5), ':', it(6), ':', it(7), &
               ' time elapsed ', iel_min, 'min ', iel_sec, 'sec'
     end subroutine update_status
-    !----------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 end program uzura3

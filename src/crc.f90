@@ -12,7 +12,7 @@ contains
         do j = n - 1, 0, -1
             ibit1 = ibits(in  ,  j, 1)           ! jth bit                   bit [31......0]
             ibit2 = ibits(icrc, 15, 1)           ! sign bit of 16bit crc
-            icrc  = ishft(ibits(icrc, 0, 15), 1) ! shift up 1bit 16bit crc
+            icrc  = ibits(ishft(icrc, 1), 0, 16) ! shift up 1bit, trim to 16bit
             if (ieor(ibit1, ibit2) == 1) icrc = ieor(icrc, igenerator)
         end do
     end subroutine crc16
