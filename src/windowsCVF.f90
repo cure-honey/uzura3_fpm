@@ -1,7 +1,5 @@
 module arguments 
-    ! module for command line option  ! compaq (dec) visual fortran for intel (windows) 
-!    use dflib
-!    use ifport ! intel visual fortran
+    use kind_m
     use mod_mpg
     private
     public :: get_option
@@ -90,7 +88,7 @@ contains
                 call get_command_argument(iarg, buffer, istatus)
                 write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
                 read(buffer, fmt) factor
-                if (factor < 0.0d0 .or. factor > 1.0d0) then 
+                if (factor < 0.0_kd .or. factor > 1.0_kd) then 
                     write(*, *) 'input out of range: 0 <= factor <= 1'
                     call option_error( trim(buffer) )
                 end if
@@ -118,12 +116,12 @@ contains
                 call get_command_argument(iarg, buffer, istatus)
                 write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
                 read(buffer, fmt) skip
-                if (skip < 1.0d0) then
+                if (skip < 1.0_kd) then
                     write(*, *) 'input out of range: skip >= 1.0'
                     call option_error( trim(buffer) )
                 end if
             case ('-cuth') 
-                cut_factor = 0.0d0 
+                cut_factor = 0.0_kd 
             case ('-l') 
                 mblock_type_param = 0
             case ('-s') 
@@ -148,7 +146,7 @@ contains
                 qms_stereo = .true.
             case ('-ns')
                 qms_stereo = .false.
-                pm_factor = 1.1d0 ! for vbr mode
+                pm_factor = 1.1_kd ! for vbr mode
             case ('-nomask')
                 q_mask = .false.
             case ('-noalias')
@@ -188,7 +186,7 @@ contains
         write(*, *) '       -m          mixed-mode for short-block           (default off)'
         write(*, *) '       -sm         short & mixed-mode for short-block   (default on )'
         write(*, *) '       -xsm xx     short / mixed switching parameter    (default 1.5)'
-        write(*, *) '       -switch xx  long/short switching parameter       (default 2.0)'
+        write(*, *) '       -switch xx  long/short switching parameter       (default 1.1)'
         write(*, *) '       -skip   xx  speeds up outer loop                 (default 1.3)'
         write(*, *) '       -ms/-ns     stereo mode (ms/normal)              (default ms)'
         write(*, *) '       -xms xx     ms/ns      switching parameter       (default 0.5)'

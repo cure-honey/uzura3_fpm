@@ -1,14 +1,15 @@
 module mod_polyphase
+    use kind_m
     implicit none
     private
     public polyphase_filter36
     integer, parameter :: nsize = 512, nband = 32
-    real (kind = 8) :: coeff(0:nband - 1, 0:nband - 1), prototype(nsize)
-    real (kind = 8) :: pi
+    real (kind = kd) :: coeff(0:nband - 1, 0:nband - 1), prototype(nsize)
+    real (kind = kd), parameter :: pi = 4 * atan(1.0_kd)
 contains
 !----------------------------------------------------------------------
     subroutine load_window(w)
-        real (kind = 8), intent(out) :: w(:) ! iso table c.1 coefficients ci of the analysis window
+        real (kind = kd), intent(out) :: w(:) ! iso table c.1 coefficients ci of the analysis window
         w(  1:  4) = (/  0.000000000d0, -0.000000477d0, -0.000000477d0, -0.000000477d0 /) 
         w(  5:  8) = (/ -0.000000477d0, -0.000000477d0, -0.000000477d0, -0.000000954d0 /) 
         w(  9: 12) = (/ -0.000000954d0, -0.000000954d0, -0.000000954d0, -0.000001431d0 /) 
@@ -141,23 +142,17 @@ contains
     !----------------------------------------------------------------------
     subroutine initialize_polyphase()
         integer :: i, j
-        pi   = 4.0d0 * atan(1.0d0)
         call load_window(prototype)  
-        do i = 0, 31
-            do j = 0, 31 
-                coeff(i, j) = cos( real( mod( (2 * i + 1) * j, 128) , kind = 8 ) * pi / 64.0d0) ! c.1.3 analysis subbband filter  
-            end do
-        end do
+        ! c.1.3 analysis subbband filter
+        forall (i = 0:31, j = 0:31) coeff(i, j) = cos(mod((2 * i + 1) * j, 128) * pi / 64.0_kd)  
     end subroutine initialize_polyphase
 !----------------------------------------------------------------------
     subroutine polyphase_filter(z, s)
-        real (kind = 8), intent(in ) :: z(:)
-        real (kind = 8), intent(out) :: s(:)
-        real (kind = 8) ::  y(64), f(0:31)
+        real (kind = kd), intent(in ) :: z(:)
+        real (kind = kd), intent(out) :: s(:)
+        real (kind = kd) ::  y(64), f(0:31)
         integer :: i
-        do i = 1, 64
-            y(i) = sum(z(i:512:64)) 
-        end do
+        forall (i = 1:64) y(i) = sum(z(i:512:64)) 
         f( 0)    = y(17)
         f( 1:16) = y(18:33) + y(16: 1:-1)
         f(17:31) = y(34:48) - y(64:50:-1)
@@ -165,9 +160,9 @@ contains
     end subroutine polyphase_filter
 !----------------------------------------------------------------------
     subroutine polyphase_filter36(pcm, subband)
-        real (kind = 8), intent(in ) :: pcm(:, :)
-        real (kind = 8), intent(out) :: subband(:, :, :)
-        real (kind = 8) :: tmp(512)
+        real (kind = kd), intent(in ) :: pcm(:, :)
+        real (kind = kd), intent(out) :: subband(:, :, :)
+        real (kind = kd) :: tmp(512)
         integer        :: i, ichannel, istart, iend
         logical, save :: qfirst = .true.
         if (qfirst) then

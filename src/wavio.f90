@@ -1,4 +1,5 @@
 module wav_io
+    use kind_m
     use mod_mpg
     implicit none
     private
@@ -12,7 +13,7 @@ module wav_io
         integer :: iformat_type, ichannels
         integer :: isamples_per_sec
         integer :: ibytes_per_sec
-        integer :: iblock_size, ibits_per_sample
+        integer :: iblock_size, ibits_per_sample 
     end type fmt_chunk
     !
     type :: fact_chunk
@@ -164,8 +165,8 @@ contains
     end subroutine check_dat_chunk
 !------------------------------------------------------------------
     subroutine wav_read(pcm) ! 16bit pcm assumed
-        real (kind = 8), intent(out) :: pcm(:, :)
-        real (kind = 8), parameter   :: denom = 32768.0d0 !32768 = 2^15
+        real (kind = kd), intent(out) :: pcm(:, :)
+        real (kind = kd), parameter   :: denom = 32768.0_kd !32768 = 2^15
         integer       , parameter   :: maxbuff = 1152 * 2
         character (len = 2) :: cbuff16(maxbuff)
         integer :: i, nchannel, ndat
@@ -179,14 +180,14 @@ contains
         case (1) !mono
             call wav_read_sub( cbuff16(1:ndat) )
             do i = 1, ndat
-                pcm(i, 1) = real( ibuff16(i), kind = 8) / denom          ! little endian assumed
-                pcm(i, 2) = 0.0d0
+                pcm(i, 1) = real( ibuff16(i), kind = kd) / denom          ! little endian assumed
+                pcm(i, 2) = 0.0_kd
             end do
         case (2) !stereo
             call wav_read_sub( cbuff16(1:2 * ndat) )
             do i = 1, ndat
-                pcm(i, 1) = real( ibuff16(2 * i - 1), kind = 8) / denom  ! little endian assumed
-                pcm(i, 2) = real( ibuff16(2 * i    ), kind = 8) / denom  ! little endian assumed
+                pcm(i, 1) = real( ibuff16(2 * i - 1), kind = kd) / denom  ! little endian assumed
+                pcm(i, 2) = real( ibuff16(2 * i    ), kind = kd) / denom  ! little endian assumed
             end do
         case default
             call abort('ichannel must be 1 or 2: subroutine wav_get')
@@ -210,13 +211,13 @@ contains
     end subroutine wav_read_sub
 !------------------------------------------------------------------
     subroutine read_pcm_1frame(pcm)
-        real (kind = 8), intent(out) :: pcm(:, :)
-        pcm = eoshift(pcm, 1152, 0.0d0, 1)
+        real (kind = kd), intent(out) :: pcm(:, :)
+        pcm = eoshift(pcm, 1152, 0.0_kd, 1)
         call wav_read(pcm(481:1632, :))
     end subroutine read_pcm_1frame
 !------------------------------------------------------------------
     subroutine read_pcm0(pcm)
-        real (kind = 8), intent(out) :: pcm(:, :)
+        real (kind = kd), intent(out) :: pcm(:, :)
         call wav_read(pcm(1153:1632, :))
     end subroutine read_pcm0
 !------------------------------------------------------------------

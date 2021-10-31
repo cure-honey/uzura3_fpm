@@ -1,4 +1,5 @@
 module mod_mpg
+    use kind_m
     implicit none
     public
     type:: mpeg_parameters
@@ -66,7 +67,7 @@ module mod_mpg
 !-------------------------------------------------------------------------------------------
     !global variables
     !debug variables
-    real (kind = 8), save :: tot_sc_l(0:20) = 0.0d0, tot_sc_s(0:11, 3) = 0.0d0
+    real (kind = kd), save :: tot_sc_l(0:20) = 0.0_kd, tot_sc_s(0:11, 3) = 0.0_kd
     integer, save :: m1 = 0, m3 = 0, mix = 0, long = 0, nshort = 0, ntable(0:31) = 0, ntab_ab(0:1) = 0
     integer, save :: ms = 0, ns = 0, ns1 = 0, ns2 = 0, nn1 = 0, nn2 = 0, nbits(14)
     integer, save :: n_sc_l = 0, n_sc_s = 0, n_sub_gain = 0, n_scale = 0, n_emph = 0
@@ -74,19 +75,19 @@ module mod_mpg
     ! switches
     logical, save :: qms_stereo = .true., q_alias = .true., q_mask = .true., q_sm = .true.
     logical, save :: q_vbr = .false., q_rio500 = .false., q_info = .true.
-    real (kind = 8), save :: cut_factor = 1.0d0, distortion_max = 0.0d0, skip = 1.3d0
+    real (kind = kd), save :: cut_factor = 1.0_kd, distortion_max = 0.0_kd, skip = 1.3_kd
     ! parameters
-    integer       , save :: icut = 26                ! cut at 24 16.5khz; 25 17.2khz; 26 17.9khz; 27 18.6khz
-    integer       , save :: mblock_type_param = 20   ! default short block! long = 0, short = 20, mixed = 21
-    real (kind = 8), save :: ath_min   = -125.0d0     ! offset  for ath  90.3db = 2^-15 16bit wav pcm assumed   
-    real (kind = 8), save :: ath_max   =   0.0d0      ! ceiling for ath                    (see init_absolute_threshold inpsycho.f90) 
-    real (kind = 8), save :: switch    =   2.0d0      ! long/short window switching factor (see switch_q in psycho.f90)
-    real (kind = 8), save :: xms       =   0.8d0      ! ns/ms switching factor             (see mid_side in layer3.f90)
-    real (kind = 8), save :: xsm       =   1.5d0      ! short/mixed switching factor       (see mid_side in layer3.f90)
-    real (kind = 8), save :: offset    =  40.0d0 ![db]! offset for masking                 (see psycho in psycho.f90)
-    real (kind = 8), save :: tempo     =   0.85d0     ! temporal masking parameter         (see psycho in psycho.f90)
-    real (kind = 8), save :: pm_factor =   1.0d0      ! factor for psychoacoustic moment   (see psycho in psycho.f90) 
-    real (kind = 8), save :: factor    =   0.4d0      ! distribute bits between 2 granules * n channels by total intensity (see av_bits in layer3.f90) 
-    real (kind = 8), save :: r0 = 0.33d0, r1 = 0.75d0 ! iso suggests r0 = 0.33d0, r1 = 0.75d0 (see layer3.90)
+    integer         , save :: icut = 26                 ! cut at 24 16.5khz; 25 17.2khz; 26 17.9khz; 27 18.6khz
+    integer         , save :: mblock_type_param = 20    ! default short block! long = 0, short = 20, mixed = 21
+    real (kind = kd), save :: ath_min   = -125.0_kd     ! offset  for ath  90.3db = 2^-15 16bit wav pcm assumed   
+    real (kind = kd), save :: ath_max   =   0.0_kd      ! ceiling for ath                    (see init_absolute_threshold inpsycho.f90) 
+    real (kind = kd), save :: switch    =   1.1_kd      ! long/short window switching factor (see switch_q in psycho.f90)
+    real (kind = kd), save :: xms       =   0.8_kd      ! ns/ms switching factor             (see mid_side in layer3.f90)
+    real (kind = kd), save :: xsm       =   1.5_kd      ! short/mixed switching factor       (see mid_side in layer3.f90)
+    real (kind = kd), save :: offset    =  40.0_kd ![db]! offset for masking                 (see psycho in psycho.f90)
+    real (kind = kd), save :: tempo     =   0.85_kd     ! temporal masking parameter         (see psycho in psycho.f90)
+    real (kind = kd), save :: pm_factor =   1.0_kd      ! factor for psychoacoustic moment   (see psycho in psycho.f90) 
+    real (kind = kd), save :: factor    =   0.4_kd      ! distribute bits between 2 granules * n channels by total intensity (see av_bits in layer3.f90) 
+    real (kind = kd), save :: r0 = 0.33_kd, r1 = 0.75_kd! iso suggests r0 = 0.33_kd, r1 = 0.75_kd (see layer3.f90)
 !-------------------------------------------------------------------------------------------
 end module mod_mpg

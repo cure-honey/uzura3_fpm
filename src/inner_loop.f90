@@ -1,4 +1,5 @@
 module mod_inner_loop
+    use kind_m
     use mod_mpg
     use mod_huffman
     implicit none
@@ -8,7 +9,7 @@ contains
 !-----------------------------------------------------------------------------------------------
     subroutine inner_loop(ibit, iblock_type, wk, i_mdct, side, itot_bits) ! iso c.1.5.4.4
         integer             , intent(in    ) :: ibit, iblock_type
-        real (kind = 8)     , intent(in    ) :: wk(:)
+        real (kind = kd)    , intent(in    ) :: wk(:)
         type (side_info_sub), intent(in out) :: side
         integer             , intent(   out) :: i_mdct(:), itot_bits
         integer :: iq0, iqquant, iquantanf, ibigvalues, icount1, & 
@@ -109,33 +110,33 @@ contains
                iqquant = iq0 + ndiv 
             end if 
         end do
-        where (wk < 0.0d0) i_mdct = -i_mdct
+        where (wk < 0.0_kd) i_mdct = -i_mdct
     end subroutine inner_loop
 !---------------------------------------------------------------------------------------------
     subroutine calc_quantanf(wk, iquantanf)     ! iso c.1.5.4.2.1
-        real (kind = 8), intent(in ) :: wk(:)
+        real (kind = kd), intent(in ) :: wk(:)
         integer, intent(out)         :: iquantanf
         integer :: i
-        real (kind = 8) :: sfm, sum1, sum2, tmp
-        sum1 =  0.0d0
-        sum2 =  0.01d0 
+        real (kind = kd) :: sfm, sum1, sum2, tmp
+        sum1 =  0.0_kd
+        sum2 =  0.01_kd 
         do i = 1, size(wk) ! 576
-            tmp = wk(i)**2.0d0
-            if (tmp > 0.0d0) sum1 = sum1 + log(tmp) 
+            tmp = wk(i)**2.0_kd
+            if (tmp > 0.0_kd) sum1 = sum1 + log(tmp) 
             sum2 = sum2 + tmp
         end do
-        sfm = exp( sum1 / 576.0d0) * 576.0d0 / sum2 
-        iquantanf = int( 8.0d0 * log(sfm) ) 
+        sfm = exp( sum1 / 576.0_kd) * 576.0_kd / sum2 
+        iquantanf = int( 8.0_kd * log(sfm) ) 
     end subroutine calc_quantanf
 !------------------------------------------------------------------------------------------------
     subroutine quantization(iqquant, iquantanf, r_mdct, i_mdct) ! iso c.1.5.4.4.1
         integer        , intent(in ) :: iqquant, iquantanf
-        real (kind = 8), intent(in ) :: r_mdct(:)
+        real (kind = kd), intent(in ) :: r_mdct(:)
         integer        , intent(out) :: i_mdct(:)
-        real (kind = 8) :: denom, tmp(576)
-        denom = 2.0d0 ** ( -real(iqquant + iquantanf, kind = 8) / 4.0d0 )
+        real (kind = kd) :: denom, tmp(576)
+        denom = 2.0_kd ** ( -real(iqquant + iquantanf, kind = kd) / 4.0_kd )
         tmp    = abs(r_mdct) * denom
-        i_mdct = nint( sqrt(tmp * sqrt(tmp)) - 0.0946d0 ) ! nint(tmp**(3/4) - 0.0946)
+        i_mdct = nint( sqrt(tmp * sqrt(tmp)) - 0.0946_kd ) ! nint(tmp**(3/4) - 0.0946)
     end subroutine quantization
 !----------------------------------------------------------------------------------------------
     subroutine divide(i_mdct, ibigvalues, icount1) ! iso c.1.5.4.4.3, c.1.5.4.4.4
