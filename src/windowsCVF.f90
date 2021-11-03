@@ -120,6 +120,12 @@ contains
                     write(*, *) 'input out of range: skip >= 1.0'
                     call option_error( trim(buffer) )
                 end if
+            case ('-alpha') 
+                iarg = iarg + 1
+                if ( iarg >= narg ) call option_error( trim(buffer) )
+                call get_command_argument(iarg, buffer, istatus)
+                write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
+                read(buffer, fmt) alpha 
             case ('-cuth') 
                 cut_factor = 0.0_kd 
             case ('-l') 
@@ -177,7 +183,7 @@ contains
         write(*, *) '       -crc        crc16 error protection on            (default off)'
         write(*, *) '       -c          copyright flag on                    (default off)'
         write(*, *) '       -o          original  flag on                    (default off)'
-        write(*, *) '       -cut 1..32  band cut-off : place after -b option (default 26: 17.9khz)'
+        write(*, *) '       -cut 1..32  band cut-off : place after -b option (default 24: 16.5khz)'
         write(*, *) '       -cuth       cut band 21 (l) or 12 (s/m)          (default off) '
         write(*, *) '       -v          vbr mode  (ns, icut = 32)            (default off)'
         write(*, *) '       -rio500     avoid rio500 vbr skip bug            (default off)'
@@ -186,11 +192,12 @@ contains
         write(*, *) '       -m          mixed-mode for short-block           (default off)'
         write(*, *) '       -sm         short & mixed-mode for short-block   (default on )'
         write(*, *) '       -xsm xx     short / mixed switching parameter    (default 1.5)'
-        write(*, *) '       -switch xx  long/short switching parameter       (default 1.1)'
-        write(*, *) '       -skip   xx  speeds up outer loop                 (default 1.3)'
+        write(*, *) '       -switch xx  long/short switching parameter       (default 2.0)'
+        write(*, *) '       -skip   xx  speeds up outer loop                 (default 2.0)'
         write(*, *) '       -ms/-ns     stereo mode (ms/normal)              (default ms)'
         write(*, *) '       -xms xx     ms/ns      switching parameter       (default 0.5)'
         write(*, *) '       -nomask     masking off                          (default on)'
+        write(*, *) '       -alpha   xx norm parameter                       (default 1.0)'
         write(*, *) '       -ath_min xx minimum of ath  [ db ]               (default -125)'
         write(*, *) '       -ath_max xx ceiling of ath  [ db ]               (default  0.0)'
         write(*, *) '       -offset  xx offset for mask [ db ]               (default 40.0)'

@@ -51,7 +51,7 @@ contains
     !------------------------------------------------------------------------------------------------
     subroutine alloc_bits(mblock_type, r_mdct, i_mdct, mpg, max_bits, ianc) ! iso c.1.5.4 
         integer               , intent(in    ) :: mblock_type(:, :)
-        real (kind = kd)       , intent(in out) :: r_mdct(:, :, :, :)
+        real (kind = kd)      , intent(in out) :: r_mdct(:, :, :, :)
         integer               , intent(   out) :: i_mdct(:, :, :), max_bits, ianc
         type (mpeg_parameters), intent(in out) :: mpg
         integer :: ibit, ibit2, ichannel, nchannel, igranule, iused_bits, nused_bits, & 
@@ -71,7 +71,7 @@ contains
         call mean_bits  (mpg, max_bits, tot_int, mbits, nused_bits)
         ibit2 = 0 ! remain bits
         do igranule = 1, 2
-            do ichannel = 1, nchannel 
+            do ichannel = 1, nchannel   
                 ibit = mbits(igranule, ichannel) + ibit2
                 call calc_mask(igranule, ichannel, mblock_type(igranule, ichannel), &
                                                    x_mask(:, :, igranule, ichannel), x_noise(:, :, igranule, ichannel) )
@@ -100,6 +100,7 @@ contains
                 nused_bits = nused_bits + iused_bits  
                 side_info%sub(igranule, ichannel)%ipart2_3_length = iused_bits  
                 ibit2 = ibit - iused_bits
+
                 ! debug info
                 ntable (side_info%sub(igranule, ichannel)%itable_select(1)) = &
                     ntable (side_info%sub(igranule, ichannel)%itable_select(1)) + 1
@@ -265,7 +266,6 @@ contains
         integer :: igranule, ichannel
         do igranule = 1, 2
             do ichannel = 1, size(r_mdct, 4)
-            !  tot_int(igranule, ichannel) = sum( r_mdct(:, :, igranule, ichannel) ** 2.0_kd  )
                 tot_int(igranule, ichannel) = sum( abs(r_mdct(:, :, igranule, ichannel)) )
             end do
         end do
@@ -291,7 +291,7 @@ contains
     subroutine mean_bits(mpg, max_bits, tot_int, mbits, iused_bits)
         type (mpeg_parameters), intent(in ) :: mpg
         integer               , intent(in ) :: max_bits
-        real (kind = kd)       , intent(in ) :: tot_int(:, :)
+        real (kind = kd)      , intent(in ) :: tot_int(:, :)
         integer               , intent(out) :: mbits(:, :), iused_bits
         integer                             :: nbits, nchannel
         nchannel = size(mbits, 2)
@@ -303,24 +303,26 @@ contains
         if (mpg%icrc == 0) iused_bits = iused_bits + 16
         nbits = max_bits - iused_bits
         !
+  !  bug  
         !!  distribute bits between 2 granules * n channels according to total intensity 
         mbits = int( (max_bits - iused_bits) * &
                      (factor * tot_int / sum(tot_int + epsilon(0.0)) + (1.0_kd - factor) / 2 / nchannel ) )
-        !!             variavle part                                     consant part      
+        !!             variable part                                     consant part      
         mbits(1, 1) = mbits(1, 1) + nbits - sum(mbits)
+
     end subroutine mean_bits
 !------------------------------------------------------------------------------------------------
     subroutine outer_loop(iallowed_bits, iblock_type, r_mdct, x_noise, iwk, side, sc_fac, iused_bits) ! iso c.1.5.4.3
         integer             , intent(in    ) :: iallowed_bits, iblock_type
         integer             , intent(   out) :: iused_bits
-        real (kind = kd)      , intent(in    ) :: r_mdct(:, :), x_noise(:, :)
+        real (kind = kd)    , intent(in    ) :: r_mdct(:, :), x_noise(:, :)
         integer             , intent(   out) :: iwk(:)
         type (side_info_sub), intent(in out) :: side
         type (scale_factor) , intent(in out) :: sc_fac
         integer :: iover_l(0:20), iover_s(0:11, 3) 
         integer :: iscfac_bits, ihuff_bits, ibits_best, iscale, iwk_best(size(iwk))
-        real (kind = kd)     :: wk(size(iwk)), th(size(iwk)), sc(size(iwk))
-        real (kind = kd)     :: distortion, distortion_min
+        real (kind = kd)    :: wk(size(iwk)), th(size(iwk)), sc(size(iwk))
+        real (kind = kd)    :: distortion, distortion_min
         type (side_info_sub):: side_best
         type (scale_factor) :: sc_fac_best
         logical             :: qexit, qfirst
@@ -375,7 +377,7 @@ contains
         sc_fac     = sc_fac_best
         side       = side_best 
         iwk        = iwk_best
-        iused_bits = ibits_best 
+        iused_bits = ibits_best
         ! debug info
         distortion_max = max(distortion_max, distortion)
         if ( side%iscalefac_scale == 1 ) n_scale = n_scale + 1
@@ -553,7 +555,7 @@ contains
     end subroutine calc_scfac_bit 
 !------------------------------------------------------------------------------------------------
     subroutine reorder(iblock_type, r_mdct, wk, icut)  ! iso 2.4.3.4.8
-        integer        , intent(in ) :: iblock_type, icut
+        integer         , intent(in ) :: iblock_type, icut
         real (kind = kd), intent(in ) :: r_mdct(:, :)
         real (kind = kd), intent(out) :: wk(:) 
         integer :: k
@@ -588,11 +590,11 @@ contains
     end subroutine reorder_long
 !..................................................................................................
     subroutine reorder_short(k, n0, n1, iscfb0, iscfb1, r_mdct, wk)
-        integer        , intent(in out) :: k
-        integer        , intent(in    ) :: n0, n1, iscfb0, iscfb1
+        integer         , intent(in out) :: k
+        integer         , intent(in    ) :: n0, n1, iscfb0, iscfb1
         real (kind = kd), intent(in    ) :: r_mdct(:, :)
         real (kind = kd), intent(   out) :: wk(:) 
-        real (kind = kd)                  :: wk0(size(wk) / 3, 3) 
+        real (kind = kd)                 :: wk0(size(wk) / 3, 3) 
         integer :: iwin, k0, m, n, iband, iscfb
         k0 = 1
         wk0 = 0.0_kd
@@ -653,7 +655,7 @@ contains
     subroutine calc_scale(iblock_type, iscalefac_scale, sc_fac, ipretab, isubblock_gain, scale) ! iso 2.4.3.4.7.1
         integer             , intent(in ) :: iblock_type, iscalefac_scale, ipretab(0:20), isubblock_gain(:)
         type (scale_factor) , intent(in ) :: sc_fac
-        real (kind = kd)     , intent(out) :: scale(:)
+        real (kind = kd)    , intent(out) :: scale(:)
         integer :: k
         scale = 1.0_kd
         select case(iblock_type)
@@ -691,7 +693,7 @@ contains
         integer             , intent(in out) :: k 
         integer             , intent(in    ) :: n0, n1, iscalefac_scale, isubblock_gain(:)
         type (scale_factor) , intent(in    ) :: sc_fac
-        real (kind = kd)     , intent(   out) :: wk(:)
+        real (kind = kd)    , intent(   out) :: wk(:)
         integer :: iscband, i, iwin
         do iscband = n0, n1
             do iwin = 1, 3
@@ -725,10 +727,10 @@ contains
 !..................................................................................................
     subroutine calc_dist_long(iglobal_gain, x, ix, th, sc, iover_l, distortion)
         real (kind = kd), intent(in ) :: x(:), th(:), sc(:)
-        integer        , intent(in ) :: iglobal_gain, ix(:)
-        integer        , intent(out) :: iover_l(0:20)
+        integer         , intent(in ) :: iglobal_gain, ix(:)
+        integer         , intent(out) :: iover_l(0:20)
         real (kind = kd), intent(out) :: distortion
-        real (kind = kd) ::  dx, ds2(0:20), as2(0:20), d2, a2, bw
+        real (kind = kd) ::  dx, ds2(0:20), as2(0:20), bw
         integer :: i, istart, iend, iscband
         iover_l = 0
         ds2 = 0.0_kd   
@@ -740,25 +742,21 @@ contains
             iend   =      iscalefactorband_l(iscband, 3) + 1
             do i = istart, iend
                 dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
-                               * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
-                ds2(iscband) = ds2(iscband) + dx   **2.0_kd / bw       
-                as2(iscband) = as2(iscband) + th(i)**2.0_kd / bw
-                distortion = distortion + ( dx / sc(i) )**2.0_kd / bw
+                               * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd) 
+                ds2(iscband) = ds2(iscband) + abs(dx) / bw       
+                as2(iscband) = as2(iscband) + th(i) / bw
+                distortion = distortion +  abs(dx) / sc(i) / bw
             end do
         end do
         where (ds2 > as2) iover_l = 1
         ! band 21
-        d2 = 0.0_kd   
-        a2 = 0.0_kd
         istart = iscalefactorband_l(20, 3) + 2
         iend   = 576
         bw     = real(iend - istart + 1, kind = kd)  
         do i = istart, iend
-             dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
-                            * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
-             d2 = d2 + dx   **2.0_kd / bw       
-             a2 = a2 + th(i)**2.0_kd / bw
-             distortion = distortion + dx**2.0_kd / bw     
+            dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
+                           * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
+            distortion = distortion + abs(dx) / bw     
         end do
     end subroutine calc_dist_long
 !------------------------------------------------------------------------------------------------
@@ -767,7 +765,7 @@ contains
         integer         , intent(in ) :: iglobal_gain, ix(:)
         integer         , intent(out) :: iover_s(0:11, 1:3)
         real (kind = kd), intent(out) :: distortion
-        real (kind = kd) :: dx, ds2(0:11, 1:3), as2(0:11, 1:3), d2, a2, bw
+        real (kind = kd) :: dx, ds2(0:11, 1:3), as2(0:11, 1:3), bw
         integer :: i, istart, iend, k, iscband, iwin
         k = 0
         iover_s = 0
@@ -783,34 +781,30 @@ contains
                     k = k + 1
                     dx = abs(x(k)) - real(abs(ix(k)), kind = kd)**(4.0_kd / 3.0_kd) &
                                    * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)  
-                    ds2(iscband, iwin) = ds2(iscband, iwin) + dx   **2.0_kd / bw   
-                    as2(iscband, iwin) = as2(iscband, iwin) + th(k)**2.0_kd / bw   
-                    distortion = distortion + ( dx / sc(i) )**2.0_kd / bw  
+                    ds2(iscband, iwin) = ds2(iscband, iwin) + abs(dx) / bw   
+                    as2(iscband, iwin) = as2(iscband, iwin) + th(k) / bw   
+                    distortion = distortion + abs(dx) /sc(i) / bw
                 end do
             end do
         end do
         where (ds2 > as2) iover_s = 1
         ! band 12
-        d2 = 0.0_kd   
-        a2 = 0.0_kd
         istart = iscalefactorband_s(11, 3) + 2
         iend   = 576
         bw     = real(iend - istart + 1, kind = kd)  
         do i = istart, iend
             dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
                            * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
-            d2 = d2 + dx   **2.0_kd / bw       
-            a2 = a2 + th(i)**2.0_kd / bw
-            distortion = distortion + dx**2.0_kd / bw     
+            distortion = distortion + abs(dx) / bw
         end do
     end subroutine calc_dist_short
 !------------------------------------------------------------------------------------------
     subroutine calc_dist_mixed(iglobal_gain, x, ix, th, sc, iover_l, iover_s, distortion)
         real (kind = kd), intent(in ) :: x(:), th(:), sc(:)
-        integer        , intent(in ) :: iglobal_gain, ix(:)
-        integer        , intent(out) :: iover_l(0:20), iover_s(0:11, 1:3)
+        integer         , intent(in ) :: iglobal_gain, ix(:)
+        integer         , intent(out) :: iover_l(0:20), iover_s(0:11, 1:3)
         real (kind = kd), intent(out) :: distortion
-        real (kind = kd) :: dx, ds2_l(0:7), as2_l(0:7), ds2_s(3:11, 1:3), as2_s(3:11, 1:3), d2, a2, bw
+        real (kind = kd) :: dx, ds2_l(0:7), as2_l(0:7), ds2_s(3:11, 1:3), as2_s(3:11, 1:3), bw
         integer :: i, istart, iend, k, iscband, iwin
         k = 0
         iover_l = 0
@@ -827,10 +821,10 @@ contains
             do i = istart, iend
                 k = k + 1
                 dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
-                               * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)  
-                ds2_l(iscband) = ds2_l(iscband) + dx   **2.0_kd / bw
-                as2_l(iscband) = as2_l(iscband) + th(k)**2.0_kd / bw
-                distortion = distortion + ( dx / sc(i) )**2.0_kd / bw
+                               * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd) 
+                ds2_l(iscband) = ds2_l(iscband) + abs(dx) / bw
+                as2_l(iscband) = as2_l(iscband) + th(k) / bw
+                distortion = distortion + abs(dx) /sc(i) / bw
             end do
             if (ds2_l(iscband) > as2_l(iscband)) iover_l(iscband) = 1
         end do
@@ -841,27 +835,23 @@ contains
                 iend   =  iscalefactorband_s(iscband, 3) + 1  
                 do i = istart, iend
                     k = k + 1
-                    dx = abs(x(k)) & 
-                        - real(abs(ix(k)), kind = kd)**(4.0_kd / 3.0_kd) * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)  
-                    ds2_s(iscband, iwin) = ds2_s(iscband, iwin) + dx   **2.0_kd / bw   
-                    as2_s(iscband, iwin) = as2_s(iscband, iwin) + th(k)**2.0_kd / bw   
-                    distortion = distortion + ( dx / sc(k) )**2.0_kd / bw  
+                    dx = abs(x(k)) - real(abs(ix(k)), kind = kd)**(4.0_kd / 3.0_kd) & 
+                        * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)  
+                    ds2_s(iscband, iwin) = ds2_s(iscband, iwin) + abs(dx) / bw   
+                    as2_s(iscband, iwin) = as2_s(iscband, iwin) + th(k) / bw   
+                    distortion = distortion + abs(dx) / sc(k)  / bw  
                 end do
                 if (ds2_s(iscband, iwin) > as2_s(iscband, iwin)) iover_s(iscband, iwin) = 1
             end do
         end do
         ! band 12
-        d2 = 0.0_kd   
-        a2 = 0.0_kd
         istart = iscalefactorband_s(11, 3) + 2
         iend   = 576
         bw     = real(iend - istart + 1, kind = kd)  
         do i = istart, iend
             dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
                            * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
-            d2 = d2 + dx   **2.0_kd / bw       
-            a2 = a2 + th(i)**2.0_kd / bw
-            distortion = distortion + dx**2.0_kd / bw     
+            distortion = distortion + dx / bw     
         end do
     end subroutine calc_dist_mixed
 !------------------------------------------------------------------------------------------------

@@ -54,7 +54,7 @@ contains
             case (0)
                 call sub_divide(ibigvalues, iregion0, iregion1)  ! iso 
                 iregion0 = min(15, iregion0)                     ! iso 2.4.2.7 region0_count 
-                iregion1 = min( 7, iregion1, 19 - iregion0) 
+                iregion1 = min( 7, iregion1, 19 - iregion0)
                 side%iregion0_count = iregion0     !  4 bits
                 side%iregion1_count = iregion1     !  3 bits
                 n0 = iscalefactorband_l(iregion0, 3) + 1 
@@ -171,7 +171,7 @@ contains
             isum0 = isum0 + huff_qa(k1, k2, k3, k4)%leng + k1 + k2 + k3 + k4 
             isum1 = isum1 + huff_qb(k1, k2, k3, k4)%leng + k1 + k2 + k3 + k4
         end do
-        if (isum0  <= isum1) then
+        if (isum0 <= isum1) then
             itab = 0 ! use table a
             isum = isum + isum0
         else
@@ -184,7 +184,7 @@ contains
         integer, intent(in ) :: ibigvalues
         integer, intent(out) :: iregion0, iregion1
         integer :: n0, n1, i
-        n0 = 2 * ibigvalues * r0  
+        n0 = 2 * ibigvalues * r0
         n1 = 2 * ibigvalues * r1  
         ! division suggested in iso document c.1.5.4.4.6 is 1/3 : 5/12 : 1/4     
         do i = 0, 20
@@ -297,7 +297,7 @@ contains
                 k2 = abs( ix(i + 1) )
                 isum = isum + huff(nhuff)%leng(k1, k2)
                 if (k1 /= 0) isum = isum + 1 ! one bit for sign
-               if (k2 /= 0) isum = isum + 1 ! one bit for sign
+                if (k2 /= 0) isum = isum + 1 ! one bit for sign
             end do
         else
             do i = n0, n1, 2

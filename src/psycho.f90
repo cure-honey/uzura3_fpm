@@ -4,7 +4,7 @@ module mod_psycho
     use mod_fft
     implicit none
     private
-    public :: psycho, calc_mask, alpha  ! subroutine
+    public :: psycho, calc_mask  ! subroutine
     real (kind = kd), parameter :: pi = 4 * atan(1.0_kd), pi2 = 2 * pi
     real (kind = kd) :: ath_l(576) , ath_s(192, 3)
     real (kind = kd) :: sf_l(576, 576), sf_s(192, 192) 
@@ -13,7 +13,6 @@ module mod_psycho
     real (kind = kd) :: freq_l(576), freq_s(192), bark_l(576), bark_s(192), bw_l(576), bw_s(192)
     real (kind = kd) :: weight_l(576), weight_s(192)
     integer          :: ibark_l(576), ibark_s(192), ifb_l(25, 0:2), ifb_s(25, 0:2)
-    real (kind = kd), parameter :: alpha = 0.27_kd ! non-linear factor
     !
 contains
     !----------------------------------------------------------------
@@ -31,18 +30,18 @@ contains
                  - 6.50_kd * exp(-0.6_kd * (freq - 3.3_kd)**2.0_kd) &  ! reference: lame ath-type 3  
                  + 5.1_kd 
         !
-            if      (freq >  5.0_kd .and. freq <=  5.5_kd) then
-                temp =  5.1_kd + 4.0_kd * (freq -  5.0_kd) 
-            else if (freq >  5.5_kd .and. freq <=  8.0_kd) then 
-                temp =  7.1_kd + 2.76_kd * (freq -  5.5_kd) 
-            else if (freq >  8.0_kd .and. freq <= 10.0_kd) then
-                temp = 14.0_kd + 1.00_kd * (freq -  8.0_kd) 
-            else if (freq > 10.0_kd .and. freq <= 11.5_kd) then
-                temp = 16.0_kd + 0.33_kd * (freq - 10.0_kd) 
-            else if (freq > 11.5_kd .and. freq <= 12.0_kd) then
-                temp = 16.5_kd + 2.0_kd * (freq - 11.5_kd) 
-            else if (freq > 12.0_kd) then
-                temp = 0.001_kd * freq ** 3.81_kd + 4.60_kd  ! 12.93     
+        !    if      (freq >  5.0_kd .and. freq <=  5.5_kd) then
+        !        temp =  5.1_kd + 4.0_kd * (freq -  5.0_kd) 
+        !    else if (freq >  5.5_kd .and. freq <=  8.0_kd) then 
+        !        temp =  7.1_kd + 2.76_kd * (freq -  5.5_kd) 
+        !    else if (freq >  8.0_kd .and. freq <= 10.0_kd) then
+        !        temp = 14.0_kd + 1.00_kd * (freq -  8.0_kd) 
+        !    else if (freq > 10.0_kd .and. freq <= 11.5_kd) then
+        !        temp = 16.0_kd + 0.33_kd * (freq - 10.0_kd) 
+        !    else if (freq > 11.5_kd .and. freq <= 12.0_kd) then
+        !        temp = 16.5_kd + 2.0_kd * (freq - 11.5_kd) 
+        !    else if (freq > 12.0_kd) then
+        !        temp = 0.001_kd * freq ** 3.81_kd + 4.60_kd  ! 12.93     
             !
             !  temp = 0.001_kd * freq ** 3.80_kd + 4.92_kd  ! 12.61    
             !  temp = 0.001_kd * freq ** 3.81_kd + 4.60_kd  ! 12.93     
@@ -51,7 +50,7 @@ contains
             !  temp = 0.001_kd * freq ** 3.84_kd + 3.61_kd  ! 13.93     
             !  temp = 0.001_kd * freq ** 3.85_kd + 3.27_kd  ! 14.28     
             !  temp = 0.001_kd * freq ** 4.00_kd - 2.86_kd  ! 20.70     
-            end if
+        !    end if
             temp = min(temp + ath_min, ath_max)  
             ath_l(i) = 10.0_kd**(temp / 20.0_kd) 
         end do
@@ -65,13 +64,11 @@ contains
     function switch_q(wx) result(ires) ! attack detection (uzura original)
         real (kind = kd), intent(in) :: wx(:, :)
         integer :: ires
-        real (kind = kd), save :: sum0a, sum1a, sum0b, sum1b
+        real (kind = kd), save :: sum0a, sum1a = 0, sum0b, sum1b = 0
         sum0a = sum1a
-!        sum1a = sum( wx(1:36, :) )
-        sum1a = sum( wx(1:36, :)**alpha )**(1 / alpha)
+        sum1a = sum( wx(1:36, :) )
         sum0b = sum1b
-!        sum1b = sum( wx(37: , :) ) 
-        sum1b = sum( wx(37: , :)**alpha )**(1 / alpha)
+        sum1b = sum( wx(37: , :) )
         if  ( sum1a > switch * sum0a .or. sum1b > switch * sum0b ) then
             ires = mblock_type_param
             if (q_sm .and. sum1a < xsm * sum0a .and. sum0a < xsm * sum1a ) ires = 21 ! mixed 
@@ -190,7 +187,7 @@ contains
         do igranule = 1, 2
         ! pop musics often have different l-r behavior in low and high frequency 
             tmp1 = tmp1 + sum( abs( wx(1:n0, igranule, 1) - wx(1:n0, igranule, 2) ) ) 
-            tmp2 = tmp2 + sum(    ( wx(1:n0, igranule, 1) + wx(1:n0, igranule, 2) ) ) 
+            tmp2 = tmp2 + sum(    ( wx(1:n0, igranule, 1) + wx(1:n0, igranule, 2) ) )
         end do
         if ( tmp1 > xms * tmp2 ) then 
             qms = .false.
@@ -280,8 +277,7 @@ contains
         integer :: igranule, ichannel
         do igranule = 1, 2
             do ichannel = 1, nchannel
-!                wx(:, igranule, ichannel) = ( afft_l(:, igranule, ichannel) * weight_l )**2.0_kd 
-                wx(:, igranule, ichannel) = ( afft_l(:, igranule, ichannel) * weight_l )**alpha 
+                wx(:, igranule, ichannel) = ( afft_l(:, igranule, ichannel) * weight_l )**2 !.0_kd 
             end do
         end do
     end subroutine calc_wx
@@ -316,8 +312,7 @@ contains
         if (q_vbr) then ! simple implimentation 
             do igranule = 1, 2
                 do ichannel = 1, nchannel
-!                    pm0(igranule, ichannel) = sum(wx(:, igranule, ichannel) * bark_l)**2 !psychoacoustic moment (uzura original) 
-                    pm0(igranule, ichannel) = sum(wx(:, igranule, ichannel) * bark_l)**(1 / alpha) !psychoacoustic moment (uzura original) 
+                    pm0(igranule, ichannel) = sum(wx(:, igranule, ichannel) * bark_l)**2 !psychoacoustic moment (uzura original) 
                 end do 
             end do
             pm = sum(pm0) / ( sum(wx) + 1.0d-9 )
@@ -344,6 +339,7 @@ contains
         integer, intent(in) :: nsample_rate
         integer :: i, j
         real (kind  = 8) :: f0, f1
+
         do i = 1, 576
             freq_l(i) = real(nsample_rate, kind = kd) / 2.0_kd * (real(i, kind = kd) - 0.5_kd) / 576.0_kd ! khz
             bark_l(i) = bark(freq_l(i) / 1000.0_kd) 
@@ -416,18 +412,16 @@ contains
         fk_l =  0.3_kd * tone_l +  0.5_kd * (1 - tone_l) 
         fl_l = 34.0_kd * tone_l + 20.0_kd * (1 - tone_l) 
         tn_l = 10.0_kd**( - ( fk_l * bark_l + fl_l + offset ) / 20.0_kd )  
-!        x0_l = matmul(sf_l, afft_l(:, igranule, ichannel) * tn_l * weight_l) + ath_l
-        x0_l = matmul(sf_l, afft_l(:, igranule, ichannel) * tn_l * weight_l ** alpha)**(1/alpha) + ath_l
+        x0_l = matmul(sf_l, afft_l(:, igranule, ichannel) * tn_l * weight_l) + ath_l
         x1_l = tempo * x1_l + (1.0_kd - tempo) * x0_l ! temporal masking
         x0_l = max(x0_l, x1_l)
         ! allowed noise for long block : average mask over a critical band
         do icritical_band = 1, 25
-!            yn(icritical_band) = sum( x0_l(ifb_l(icritical_band, 1):ifb_l(icritical_band, 2)) ) &
-!                               / real(ifb_l(icritical_band, 0), kind = kd)
-            yn(icritical_band) = sum( x0_l(ifb_l(icritical_band, 1):ifb_l(icritical_band, 2))**alpha)**(1/alpha) &
-                                  / real(ifb_l(icritical_band, 0), kind = kd) 
+            yn(icritical_band) = sum( x0_l(ifb_l(icritical_band, 1):ifb_l(icritical_band, 2)) ) &
+                               / real(ifb_l(icritical_band, 0), kind = kd)
         end do
         y0_l = max( ath_l, yn(ibark_l) ) 
+        ! 
         ! save old data
         p1_l(:, ichannel) = p0_l(:, ichannel)
         p2_l(:, ichannel) = p1_l(:, ichannel)
@@ -443,8 +437,7 @@ contains
             fk_s =  0.3_kd * tone_s +  0.5_kd * (1 - tone_s)  
             fl_s = 34.0_kd * tone_s + 20.0_kd * (1 - tone_s) 
             tn_s = 10.0_kd**( - ( fk_s * bark_s + fl_s + offset ) / 20.0_kd )
-!            x0_s(:, iwin) = matmul(sf_s, afft_s(:, iwin, igranule, ichannel) * tn_s * weight_s) + ath_s(:, iwin)
-            x0_s(:, iwin) = matmul(sf_s, afft_s(:, iwin, igranule, ichannel) * tn_s * weight_s **alpha)**(1/alpha) + ath_s(:, iwin)
+            x0_s(:, iwin) = matmul(sf_s, afft_s(:, iwin, igranule, ichannel) * tn_s * weight_s) + ath_s(:, iwin)
            ! save old data
             p1_s(:, ichannel) = p0_s(:, ichannel)
             p2_s(:, ichannel) = p1_s(:, ichannel)
@@ -461,7 +454,7 @@ contains
         ! allowed noise for short block  : average mask over a critical band
         do iwin = 1, 3
             do icritical_band = 1, 25
-                yn(icritical_band) = sum( x0_s(ifb_s(icritical_band, 1):ifb_s(icritical_band, 2), iwin)**alpha ) **(1 / alpha) &
+                yn(icritical_band) = sum( x0_s(ifb_s(icritical_band, 1):ifb_s(icritical_band, 2), iwin) ) &
                                      / real(ifb_s(icritical_band, 0), kind = kd) 
             end do
             y0_s(:, iwin) = max( ath_s(:, iwin), yn(ibark_s(:)) ) 
@@ -510,13 +503,13 @@ contains
         res = 13.0_kd * atan(0.76_kd * f) + 3.5_kd * atan( (f / 7.5_kd)**2.0_kd )
     end function bark
  !------------------------------------------------------------------------------------------------
-    function spreading_function0(z) result(res)
+    function spreading_function(z) result(res)
         real (kind = kd), intent(in) :: z
         real (kind = kd) :: res
         res = 15.81_kd + 7.5_kd * (z + 0.474_kd) - 17.5_kd * sqrt(1.0_kd + (z + 0.474_kd)**2.0_kd) 
-    end function spreading_function0
+    end function spreading_function
  !------------------------------------------------------------------------------------------------
-    function spreading_function(z) result(res)
+    function spreading_function0(z) result(res)
         real (kind = kd), intent(in) :: z
         real (kind = kd) :: res
        ! if (z < 0.0_kd) then
@@ -529,8 +522,8 @@ contains
         else
             res =  75.0_kd * z 
         end if
-    end function spreading_function
-!------------------------------------------------------------------------------------------------
+    end function spreading_function0
+ !------------------------------------------------------------------------------------------------
     function spreading_function2(z, y) result(res)
         real (kind = kd), intent(in) :: z, y
         real (kind = kd) :: res

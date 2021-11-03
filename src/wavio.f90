@@ -148,8 +148,20 @@ contains
         integer :: i
         character (len = 4) :: chnk_id
         character (len = 1) :: dummy
-        chnk_id = word32()
-        if      ( chnk_id == fct%chunk_id ) then 
+        ! skip until block
+        do
+            chnk_id = word32()
+            if ( chnk_id /= 'data' ) then 
+                fct%ichunk_size = int32()
+                do i = 1, fct%ichunk_size
+                    dummy = word8()
+                end do
+            else 
+                exit    
+            end if    
+        end do
+
+        if ( chnk_id == fct%chunk_id ) then 
             fct%ichunk_size = int32()
             do i = 1, fct%ichunk_size
                 dummy = word8()
@@ -157,7 +169,7 @@ contains
             if ( word32() == dat%chunk_id ) then
                 dat%ichunk_size = int32()
             end if
-        else  if ( chnk_id == dat%chunk_id ) then
+        else if ( chnk_id == dat%chunk_id ) then
             dat%ichunk_size = int32()
         else
             call abort('cannot find fact chunk nor data chunk!')
@@ -167,7 +179,7 @@ contains
     subroutine wav_read(pcm) ! 16bit pcm assumed
         real (kind = kd), intent(out) :: pcm(:, :)
         real (kind = kd), parameter   :: denom = 32768.0_kd !32768 = 2^15
-        integer       , parameter   :: maxbuff = 1152 * 2
+        integer         , parameter   :: maxbuff = 1152 * 2
         character (len = 2) :: cbuff16(maxbuff)
         integer :: i, nchannel, ndat
         integer  (kind = 2) :: ibuff16(maxbuff)
