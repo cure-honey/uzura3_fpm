@@ -25,8 +25,8 @@ module mod_mpg
                   0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 414, 448 /), &
                (/15, 3/) )
     character (len = 8) :: mpeg_mode_names(4)      = (/'stereo  ', 'j-stereo', 'dual-ch ', 'mono    '/)  ! iso 2.4.2.3 mode
-    character (len = 3) :: mpeg_layer_names(3)     = (/'iii', 'ii ', 'i  '/)                             ! iso 2.4.2.3 layer
-    character (len = 7) :: mpeg_version_names(0:3) = (/'mpeg2.5', '       ', 'mpeg-ii', 'mpeg-i '/)      ! iso 2.4.2.3 id ! mpeg2.5 non-standard 
+    character (len = 3) :: mpeg_layer_names(3)     = (/'III', 'II ', 'I  '/)                             ! iso 2.4.2.3 layer
+    character (len = 7) :: mpeg_version_names(0:3) = (/'mpeg2.5', '       ', 'MPEG-II', 'MPEG-I '/)      ! iso 2.4.2.3 id ! mpeg2.5 non-standard 
     character (len = 7) :: mpeg_demp_names(4)      = (/'none   ', '50/15us', '       ', 'citt   '/)      ! iso 2.4.2.3 emphasis
 !-------------------------------------------------------------------------------------------
 !mpeg1 / layer3:   iso 2.4.1.7, 2.4.2.7 
@@ -75,17 +75,17 @@ module mod_mpg
     ! switches
     logical, save :: qms_stereo = .true., q_alias = .true., q_mask = .true., q_sm = .true.
     logical, save :: q_vbr = .false., q_rio500 = .false., q_info = .true.
-    real (kind = kd), save :: cut_factor = 1.0_kd, distortion_max = 0.0_kd, skip = 1.3_kd
+    real (kind = kd), save :: cut_factor = 1.0_kd, distortion_max = 0.0_kd, skip = 2.0_kd
     ! parameters
-    integer         , save :: icut = 26                 ! cut at 24 16.5khz; 25 17.2khz; 26 17.9khz; 27 18.6khz
+    integer         , save :: icut = 24                 ! cut at 24 16.5khz; 25 17.2khz; 26 17.9khz; 27 18.6khz
     integer         , save :: mblock_type_param = 20    ! default short block! long = 0, short = 20, mixed = 21
     real (kind = kd), save :: ath_min   = -125.0_kd     ! offset  for ath  90.3db = 2^-15 16bit wav pcm assumed   
     real (kind = kd), save :: ath_max   =   0.0_kd      ! ceiling for ath                    (see init_absolute_threshold inpsycho.f90) 
-    real (kind = kd), save :: switch    =   1.1_kd      ! long/short window switching factor (see switch_q in psycho.f90)
+    real (kind = kd), save :: switch    =   2.0_kd      ! long/short window switching factor (see switch_q in psycho.f90)
     real (kind = kd), save :: xms       =   0.8_kd      ! ns/ms switching factor             (see mid_side in layer3.f90)
     real (kind = kd), save :: xsm       =   1.5_kd      ! short/mixed switching factor       (see mid_side in layer3.f90)
     real (kind = kd), save :: offset    =  40.0_kd ![db]! offset for masking                 (see psycho in psycho.f90)
-    real (kind = kd), save :: tempo     =   0.85_kd     ! temporal masking parameter         (see psycho in psycho.f90)
+    real (kind = kd), save :: tempo     =  0.85_kd      ! temporal masking parameter         (see psycho in psycho.f90)
     real (kind = kd), save :: pm_factor =   1.0_kd      ! factor for psychoacoustic moment   (see psycho in psycho.f90) 
     real (kind = kd), save :: factor    =   0.4_kd      ! distribute bits between 2 granules * n channels by total intensity (see av_bits in layer3.f90) 
     real (kind = kd), save :: r0 = 0.33_kd, r1 = 0.75_kd! iso suggests r0 = 0.33_kd, r1 = 0.75_kd (see layer3.f90)

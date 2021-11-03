@@ -60,7 +60,7 @@ program uzura3
        call alloc_bits(mblock_type, r_mdct, i_mdct, mpg, iframe_length, ianc)
        call encode_all(mpg, i_mdct, nchannel, ianc)
        call write_bits_1frame(iframe_length)
-       if ( mod(iframe, 50) == 1 ) call update_status(iframe, itotal_frames) 
+       if ( mod(iframe, 200) == 1 ) call update_status(iframe, itotal_frames) 
     end do
     call update_status(iframe, itotal_frames) 
     write(*, *) 'total frames', iframe
