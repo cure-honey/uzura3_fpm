@@ -22,6 +22,6 @@ MP3 encoder in Fortran.
 
  fpm run --profile release -- file_name
 
-- bitrate 320kBps, cut off frequency 32 band, normal stereo, no mix-block s
+- bitrate 320kBps, cut off frequency 32th band, normal stereo, no mixed blocks
 
  fpm run --profile release -- -b 14 -cut 32 -ns -s file_name

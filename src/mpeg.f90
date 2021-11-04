@@ -75,9 +75,9 @@ module mod_mpg
     ! switches
     logical, save :: qms_stereo = .true., q_alias = .true., q_mask = .true., q_sm = .true.
     logical, save :: q_vbr = .false., q_rio500 = .false., q_info = .true.
-    real (kind = kd), save :: cut_factor = 1.0_kd, distortion_max = 0.0_kd, skip = 2.0_kd
+    real (kind = kd), save :: cut_factor = 1.0_kd, distortion_max = 0.0_kd, skip = 1.1_kd
     ! parameters
-    integer         , save :: icut = 24                 ! cut at 24 16.5khz; 25 17.2khz; 26 17.9khz; 27 18.6khz
+    integer         , save :: icut = 32                 ! cut at 24 16.5khz; 25 17.2khz; 26 17.9khz; 27 18.6khz
     integer         , save :: mblock_type_param = 20    ! default short block! long = 0, short = 20, mixed = 21
     real (kind = kd), save :: ath_min   = -125.0_kd     ! offset  for ath  90.3db = 2^-15 16bit wav pcm assumed   
     real (kind = kd), save :: ath_max   =   0.0_kd      ! ceiling for ath                    (see init_absolute_threshold inpsycho.f90) 
@@ -87,7 +87,7 @@ module mod_mpg
     real (kind = kd), save :: offset    =  40.0_kd ![db]! offset for masking                 (see psycho in psycho.f90)
     real (kind = kd), save :: tempo     =  0.85_kd      ! temporal masking parameter         (see psycho in psycho.f90)
     real (kind = kd), save :: pm_factor =   1.0_kd      ! factor for psychoacoustic moment   (see psycho in psycho.f90) 
-    real (kind = kd), save :: factor    =   0.4_kd      ! distribute bits between 2 granules * n channels by total intensity (see av_bits in layer3.f90) 
+    real (kind = kd), save :: factor    =   0.97_kd     ! distribute bits between 2 granules * n channels by total intensity (see av_bits in layer3.f90) 
     real (kind = kd), save :: r0 = 0.33_kd, r1 = 0.75_kd! iso suggests r0 = 0.33_kd, r1 = 0.75_kd (see layer3.f90)
 !-------------------------------------------------------------------------------------------
 end module mod_mpg
