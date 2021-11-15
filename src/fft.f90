@@ -3,14 +3,15 @@ module mod_fft
     implicit none
     private
     public :: init_fft, fft23, fft23han ! subroutine
-    integer, public :: indx576(1152), indx192(384)
-    complex (kind = kd), public :: omega576(0:1151), omega192(0:383), sqrt3_2
-    real (kind = kd), public :: han576(1152), han192(384)
-    real (kind = kd), parameter :: pi = 4 * atan(1.0_kd)
+    integer, save, public :: indx576(1152), indx192(384)
+    complex (kind = kd), save, public :: omega576(0:1151), omega192(0:383), sqrt3_2
+    real (kind = kd), save, public :: han576(1152), han192(384)
+    real (kind = kd), save :: pi
 contains
     !-----------------------------------------------------------------------------------------------------------------
     subroutine init_fft
         integer :: i, k, n, m
+        pi = 4 * atan(1.0_kd)
         sqrt3_2 = cmplx(0.0_kd, sqrt(0.75_kd), kind = kd) ! isqrt(3) / 2
         !
         indx576 = 1
@@ -26,7 +27,7 @@ contains
                 indx576(i) = indx576(i) + ( mod(i - 1, 3 * m) / m ) * n
             end do
             omega576(i - 1) = exp( cmplx(0.0_kd, 2.0_kd * pi / 1152.0_kd * real(i - 1, kind = kd), kind = kd) )
-        ! han576(i) = sqrt(8.0d0 / 3.0d0) * 0.5d0 *( 1.0d0 - cos(2.0d0 * pi * real(i - 1, kind = 8) / 1152.0d0 ) )
+           ! han576(i) = sqrt(8.0d0 / 3.0d0) * 0.5d0 *( 1.0d0 - cos(2.0d0 * pi * real(i - 1, kind = 8) / 1152.0d0 ) )
             han576(i) = 0.5_kd *( 1.0_kd - cos(2.0_kd * pi * real(i - 1, kind = 8) / 1152.0_kd ) )
         end do
         ! 

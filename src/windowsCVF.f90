@@ -1,6 +1,7 @@
 module arguments 
     use kind_m
     use mod_mpg
+    implicit none
     private
     public :: get_option
 contains
@@ -75,23 +76,19 @@ contains
                 if ( iarg >= narg ) call option_error( trim(buffer) )
                 call get_command_argument(iarg, buffer, istatus)
                 write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
-                read(buffer, fmt) offset
+                read(buffer, fmt) offset_l
             case ('-tempo') 
                 iarg = iarg + 1
                 if ( iarg >= narg ) call option_error( trim(buffer) )
                 call get_command_argument(iarg, buffer, istatus)
                 write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
-                read(buffer, fmt) tempo
-            case ('-factor') 
+                read(buffer, fmt) tempo_l
+            case ('-pow') 
                 iarg = iarg + 1
                 if ( iarg >= narg ) call option_error( trim(buffer) )
                 call get_command_argument(iarg, buffer, istatus)
                 write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
-                read(buffer, fmt) factor
-                if (factor < 0.0_kd .or. factor > 1.0_kd) then 
-                    write(*, *) 'input out of range: 0 <= factor <= 1'
-                    call option_error( trim(buffer) )
-                end if
+                read(buffer, fmt) pow
             case ('-r0') 
                 iarg = iarg + 1
                 if ( iarg >= narg ) call option_error( trim(buffer) )
@@ -104,12 +101,6 @@ contains
                 call get_command_argument(iarg, buffer, istatus)
                 write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
                 read(buffer, fmt) r1
-            case ('-pm') 
-                iarg = iarg + 1
-                if ( iarg >= narg ) call option_error( trim(buffer) )
-                call get_command_argument(iarg, buffer, istatus)
-                write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
-                read(buffer, fmt) pm_factor
             case ('-skip') 
                 iarg = iarg + 1
                 if ( iarg >= narg ) call option_error( trim(buffer) )
@@ -120,12 +111,6 @@ contains
                     write(*, *) 'input out of range: skip >= 1.0'
                     call option_error( trim(buffer) )
                 end if
-            case ('-alpha') 
-                iarg = iarg + 1
-                if ( iarg >= narg ) call option_error( trim(buffer) )
-                call get_command_argument(iarg, buffer, istatus)
-                write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
-                read(buffer, fmt) alpha 
             case ('-cuth') 
                 cut_factor = 0.0_kd 
             case ('-l') 
@@ -138,12 +123,6 @@ contains
                 mblock_type_param = 21
             case ('-sm') 
                 q_sm = .true.
-            case ('-v') ! vbr mode
-                q_vbr = .true. 
-                qms_stereo = .false.
-                icut = 32
-            case ('-rio500') 
-                q_rio500 = .true.
             case ('-c') 
                 mpg%icopyright = 1 ! copyrigt on
             case ('-o') 
@@ -152,9 +131,10 @@ contains
                 qms_stereo = .true.
             case ('-ns')
                 qms_stereo = .false.
-                pm_factor = 1.1_kd ! for vbr mode
             case ('-nomask')
                 q_mask = .false.
+            case ('-1norm')
+                q_pnorm = .false.
             case ('-noalias')
                 q_alias = .false.
             case ('-noinfo')
@@ -172,52 +152,51 @@ contains
         character (len = *), intent(in) :: text
         call print_option()
         write(*, *)
-        write(*, '(2a)') ' >>>>>> error near >>>>>>', text
+        write(*, '(3a)') ' >>>>>> error near >>>>>>', text, '<<<<<<'
         stop
     end subroutine option_error
     !---------------------------------------------------------------
     subroutine print_option()
         write(*, *) 'usage : uzura3 -options file_name '
         write(*, *) '      : file_name.wav -> file_name.mp3'
-        write(*, *) 'option:-b  1..14   bitrate for cbr mode                 (default 9 : 128kbps)'
-        write(*, *) '       -crc        crc16 error protection on            (default off)'
-        write(*, *) '       -c          copyright flag on                    (default off)'
-        write(*, *) '       -o          original  flag on                    (default off)'
-        write(*, *) '       -cut 1..32  band cut-off : place after -b option (default 32: 22.05khz)'
-        write(*, *) '       -cuth       cut band 21 (l) or 12 (s/m)          (default off) '
-        write(*, *) '       -v          vbr mode  (ns, icut = 32)            (default off)'
-        write(*, *) '       -rio500     avoid rio500 vbr skip bug            (default off)'
-        write(*, *) '       -l          long-block-only                      (default off)'
-        write(*, *) '       -s          short-mode for short-block           (default off)'
-        write(*, *) '       -m          mixed-mode for short-block           (default off)'
-        write(*, *) '       -sm         short & mixed-mode for short-block   (default on )'
-        write(*, *) '       -xsm xx     short / mixed switching parameter    (default 1.5)'
-        write(*, *) '       -switch xx  long/short switching parameter       (default 2.0)'
-        write(*, *) '       -skip   xx  speeds up outer loop                 (default 1.1)'
-        write(*, *) '       -ms/-ns     stereo mode (ms/normal)              (default ms)'
-        write(*, *) '       -xms xx     ms/ns      switching parameter       (default 0.5)'
-        write(*, *) '       -nomask     masking off                          (default on)'
-        write(*, *) '       -ath_min xx minimum of ath  [ db ]               (default -125)'
-        write(*, *) '       -ath_max xx ceiling of ath  [ db ]               (default  0.0)'
-        write(*, *) '       -offset  xx offset for mask [ db ]               (default 40.0)'
-        write(*, *) '       -tempo   xx temporal masking factor              (default 0.85)'
-        write(*, *) '       -factor  xx bit distribution among (gr, ch)      (default 0.97)'
-        write(*, *) '       -noalias    anti-alias for mixed-block off       (default on)'
-        write(*, *) '       -debug      print debug info                     (default on) '
-        write(*, *) '       -about      about uzura3 '
+        write(*, *) 'option:-b  1..14    bitrate for cbr mode                 (default 9 : 128kbps)'
+        write(*, *) '       -crc         crc16 error protection on            (default off)'
+        write(*, *) '       -c           copyright flag on                    (default off)'
+        write(*, *) '       -o           original  flag on                    (default off)'
+        write(*, *) '       -cut 1..32   band cut-off : place after -b option (default 32: 22.05khz)'
+        write(*, *) '       -cuth        cuts band 21 (l) or 12 (s/m)         (default off) '
+        write(*, *) '       -l           long-block-only                      (default off)'
+        write(*, *) '       -s           short-mode for short-block           (default off)'
+        write(*, *) '       -m           mixed-mode for short-block           (default off)'
+        write(*, *) '       -sm          short & mixed-mode for short-block   (default on )'
+        write(*, *) '       -xsm xx      short / mixed switching parameter    (default 1.5)'
+        write(*, *) '       -switch xx   long/short switching parameter       (default 2.0)'
+        write(*, *) '       -skip   xx   speeds up outer loop                 (default 10.0)'
+        write(*, *) '       -ms/-ns      stereo mode (ms/normal)              (default ms)'
+        write(*, *) '       -xms xx      ms/ns stereo switching parameter     (default 0.5)'
+        write(*, *) '       -nomask      masking off                          (default on)'
+        write(*, *) '       -ath_min xx  minimum of ath  [ db ]               (default -150.0)'
+        write(*, *) '       -ath_max xx  ceiling of ath  [ db ]               (default 0.0)'
+        write(*, *) '       -offset  xx  offset for mask [ db ] +20db=0.1x    (defaul -50.0)'
+        write(*, *) '       -tempo_l xx  temporal masking factor              (default 0.85)'
+        write(*, *) '       -pow     xx  p-norm                               (defaul  0.5)'
+        write(*, *) '       -1norm       1-norm                               (defaul  off)'
+        write(*, *) '       -noalias     anti-alias for mixed-block off       (default on)'
+        write(*, *) '       -debug       print debug info                     (default on) '
+        write(*, *) '       -about       about uzura3 '
         write(*, *) '        '
         write(*, *) 'example cbr 128kbps crc on : uzura3 -crc   file_name '
-        write(*, *) 'example vbr normal stereo  : uzura3 -v -ns file_name '
+        write(*, *) 'example short-block normal stereo  : uzura3 -s -ns file_name '
     end subroutine print_option
     !---------------------------------------------------------------
     subroutine print_about()
         implicit none
-        write(*, *) ' ******* uzura3 is an mpeg-i/layer-iii encoder written in fortran90. ********'
+        write(*, *) ' ******* uzura3 is an mpeg-I/layer-III encoder written in fortran95. ********'
         write(*, *) ' **** this program comes with absolutely no warranty. (c) h.o. 2000-2004 **** '
         write(*, *)
         write(*, *)
-        write(*, *) ' http://members.tripod.co.jp/kitaurawa/index.html   (japanese page)'
-        write(*, *) ' http://members.tripod.co.jp/kitaurawa/index_e.html (english  page)'
+        write(*, *) ' http://members.tripod.co.jp/kitaurawa/index.html   (Japanese page)'
+        write(*, *) ' http://members.tripod.co.jp/kitaurawa/index_e.html (English  page)'
         stop 
     end subroutine print_about
     !---------------------------------------------------------------

@@ -4,8 +4,8 @@ module mod_polyphase
     private
     public polyphase_filter36
     integer, parameter :: nsize = 512, nband = 32
-    real (kind = kd) :: coeff(0:nband - 1, 0:nband - 1), prototype(nsize)
-    real (kind = kd), parameter :: pi = 4 * atan(1.0_kd)
+    real (kind = kd), save :: coeff(0:nband - 1, 0:nband - 1), prototype(nsize)
+    real (kind = kd), save :: pi
 contains
 !----------------------------------------------------------------------
     subroutine load_window(w)
@@ -142,6 +142,7 @@ contains
     !----------------------------------------------------------------------
     subroutine initialize_polyphase()
         integer :: i, j
+        pi = 4.0_kd * atan(1.0_kd)  
         call load_window(prototype)  
         ! c.1.3 analysis subbband filter
         forall (i = 0:31, j = 0:31) coeff(i, j) = cos(mod((2 * i + 1) * j, 128) * pi / 64.0_kd)  

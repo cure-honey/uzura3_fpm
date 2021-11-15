@@ -3,13 +3,13 @@ module mod_mdct
     implicit none
     private
     public :: mdct_initialize, sub_mdct
-    real (kind = kd):: pi
-    integer :: indx9(9)
+    real (kind = kd), parameter::c(0:7) = (/ -0.6000_kd, -0.5350_kd, -0.3300_kd, -0.1850_kd, &
+                                             -0.0950_kd, -0.0410_kd, -0.0142_kd, -0.0037_kd  /) 
+    integer, save :: indx9(9)
     complex (kind = kd), save:: omega9(0:8), omega9s(9), sqrt3_2, omega3(0:2), omega3s(3)
-    real(kind = kd), parameter::c(0:7) = [-0.6000_kd, -0.5350_kd, -0.3300_kd, -0.1850_kd, &
-                                          -0.0950_kd, -0.0410_kd, -0.0142_kd, -0.0037_kd]
-    real(kind = kd), save :: ca(0:7), cs(0:7), window_n(36), window_s(12), window_start(36), window_stop(36)
-    real(kind = kd), save, allocatable :: subbuff(:, :, :)
+    real (kind = kd), save :: ca(0:7), cs(0:7), window_n(36), window_s(12), window_start(36), window_stop(36)
+    real (kind = kd), save, allocatable :: subbuff(:, :, :)
+    real (kind = kd), save :: pi
 contains
 !---------------------------------------------------------------------------------------------
     subroutine mdct_initialize()
@@ -20,13 +20,13 @@ contains
         call fft3_initialize()
         ! iso table b.9 coefficients for aliasing reduction:
         do i = 0, 7
-            cs(i) =  sqrt( 1.0_kd    / ( 1.0_kd + c(i)**2 ) )
+            cs(i) =  sqrt( 1.0_kd   / ( 1.0_kd + c(i)**2 ) )
             ca(i) = -sqrt( c(i)**2  / ( 1.0_kd + c(i)**2 ) )
         end do
         ! iso 2.4.3.4.10.3 windowing, c.1.5.3.3
         ! normal window
         do i = 1, 36 
-           window_n(i) = sin( real(2 * i - 1, kind = kd) / 72.0_kd * pi)
+            window_n(i) = sin( real(2 * i - 1, kind = kd) / 72.0_kd * pi)
         end do
         ! short window
         do i = 1, 12 
@@ -52,7 +52,7 @@ contains
         real (kind = kd), intent(out) :: subbuff(:, :, :) ! 32 * 54 * nchannel
         subbuff = eoshift(subbuff, 36, 0.0_kd, 2)
         subbuff(:     , 19:54  , :) =  subband(:, :, :)           
-        subbuff(2:32:2, 20:54:2, :) = -subbuff(2:32:2, 20:54:2, :) ! iso figure a.4 layer iii decoder diagram
+        subbuff(2:32:2, 20:54:2, :) = -subbuff(2:32:2, 20:54:2, :) ! ISO figure A.4 layer III decoder diagram
                                                  !    ~~~~~~~~~~~~ not written in the text but only in figure 
     end subroutine cp_subband
 !--------------------------------------------------------------------------------------------------
@@ -238,10 +238,6 @@ contains
             indx9(i) = n + 1
             omega9(i - 1) = exp( cmplx(0.0_kd, 2.0_kd * pi /  9.0_kd * real(i - 1, kind = kd), kind = kd) )
             omega9s(i)    = exp( cmplx(0.0_kd, 2.0_kd * pi / 36.0_kd * ( 1.0_kd / 8.0_kd + real(i - 1, kind = kd) ), kind = kd) )
-            !omega9(i - 1) = cmplx( cos( real( 2 * i - 2, kind = kd) /   9.0_kd * pi ),   &
-            !                       sin( real( 2 * i - 2, kind = kd) /   9.0_kd * pi ), kind = kd ) 
-            !omega9s(i)    = cmplx( cos( real( 8 * i - 7, kind = kd) / 144.0_kd * pi ), & 
-            !                       sin( real( 8 * i - 7, kind = kd) / 144.0_kd * pi ), kind = kd ) 
         end do
     end subroutine fft9_initialize
 !-----------------------------------------------------------------------
@@ -285,10 +281,6 @@ contains
         do i = 1, 3
             omega3(i - 1) = exp( cmplx(0.0_kd, 2.0_kd * pi /  3.0_kd * real(i - 1, kind = kd), kind = kd) )
             omega3s(i)    = exp( cmplx(0.0_kd, 2.0_kd * pi / 12.0_kd * ( 1.0_kd / 8.0_kd + real(i - 1, kind = kd) ), kind = kd) )
-        !    omega3(i - 1) = cmplx( cos( real( 2 * i - 2, kind = kd) /  3.0_kd * pi ),   &
-        !                           sin( real( 2 * i - 2, kind = kd) /  3.0_kd * pi ), kind = kd ) 
-        !    omega3s(i)    = cmplx( cos( real( 8 * i - 7, kind = kd) / 48.0_kd * pi ),   & 
-        !                           sin( real( 8 * i - 7, kind = kd) / 48.0_kd * pi ), kind = kd ) 
         end do
     end subroutine fft3_initialize
 !-----------------------------------------------------------------------

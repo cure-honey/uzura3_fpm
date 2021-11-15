@@ -87,7 +87,7 @@ contains
         character (len = *), intent(in    ) :: fname
         integer :: io
         ir = iread
-        open(ir, file = fname, status = 'old', iostat = io, access = 'stream') 
+        open(ir, file = fname, status = 'old', iostat = io, access = 'stream') ! f2003
         if (io /= 0) then
             write(*, '(a, i3, a, i3, 2a)' ) ' i/o error ', io, ' occuerred. file =', iread, ' file name ', fname
             call abort('check input file! suggestion: is file name correct?')

@@ -52,15 +52,15 @@ program uzura3
     iframe = 0
     call read_pcm0(pcm)                ! read 480 pcm data (arbitrary)
     do while (iframe < itotal_frames)  ! main loop
-       iframe = iframe + 1
-       call read_pcm_1frame(pcm)
-       call psycho(pcm, mpg, mblock_type)
-       call polyphase_filter36(pcm, subband)
-       call sub_mdct(subband, r_mdct, mblock_type(:, 1), q_alias)
-       call alloc_bits(mblock_type, r_mdct, i_mdct, mpg, iframe_length, ianc)
-       call encode_all(mpg, i_mdct, nchannel, ianc)
-       call write_bits_1frame(iframe_length)
-       if ( mod(iframe, 200) == 1 ) call update_status(iframe, itotal_frames) 
+        iframe = iframe + 1
+        call read_pcm_1frame(pcm)
+        call psycho(pcm, mpg, mblock_type)
+        call polyphase_filter36(pcm, subband)
+        call sub_mdct(subband, r_mdct, mblock_type(:, 1), q_alias)
+        call alloc_bits(mblock_type, r_mdct, i_mdct, mpg, iframe_length, ianc)
+        call encode_all(mpg, i_mdct, nchannel, ianc)
+        call write_bits_1frame(iframe_length)
+        if ( mod(iframe, 200) == 1 ) call update_status(iframe, itotal_frames) 
     end do
     call update_status(iframe, itotal_frames) 
     write(*, *) 'total frames', iframe
@@ -73,6 +73,11 @@ contains
 !------------------------------------------------------------------
     subroutine print_debug_info()
         if (q_info) then
+            print '(a)', ' ======== parameters ========================================================='
+            print '(3(a, f8.2))', ' ath_min=', ath_min, ' ath_max=', ath_max, ' offset =', offset_l
+            print '(3(a, f8.2))', ' switch =', switch,  ' xsm    =', xsm    , ' xms    =', xms                
+            print '(2(a, f8.2))', ' tempo  =', tempo_l
+            if (q_pnorm) print '(a, f8.2)', ' masking: p-norm =', pow 
             print '(a)', ' ======== info ==============================================================='
             print '(5(a, i7))', ' block type:long', long, ':short', nshort, ':mixed', mix, ':type1', m1, ':type3', m3
             print '(a, 2i7, a, 2i6, a, 3i7)', ' ms/ns select   ', ms, ns, ' [', ns1, ns2, '] :long/short switch', nn1, nn2
@@ -92,7 +97,7 @@ contains
             print '(a, 14f5.1)', ' (%):', real(nbits * 100) / real(sum(nbits))
             print '(a, f7.2, a, f10.5)', ' average bit rate (kbps)', sum(real(nbits * mpeg_bit_rates(1:14,mpg%layer))) &
                                          / real(sum(nbits)), '      :maximum distortion ', distortion_max
-            print '(a)', ' ======== info ==============================================================='
+            print '(a)', ' ============================================================================='
         end if
     end subroutine print_debug_info
 !------------------------------------------------------------------
@@ -125,7 +130,7 @@ contains
 !------------------------------------------------------------------
     subroutine pr_info(mpg)
         type (mpeg_parameters), intent(in) :: mpg
-        write(*, *) 'uzura3 (mp3 encoder/fortran90) ver.0.5b (c) h.o. psychoacoustic model enoken'
+        write(*, *) 'uzura3 (mp3 encoder/fortran95) ver.0.6 (c) H.O. psychoacoustic model Lincoln'
         if (mpg%icrc == 0) write(*, *) 'crc16 error protection enabled'
     end subroutine pr_info
 !------------------------------------------------------------------

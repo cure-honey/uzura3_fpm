@@ -1621,7 +1621,8 @@ contains
         integer :: n
         n = huff%nmax
         huff%linmax = 2**huff%linbits - 1
-        allocate( huff%leng(0:n, 0:n), huff%icod(0:n, 0:n) )
+        allocate( huff%leng(0:n, 0:n) )
+        allocate( huff%icod(0:n, 0:n) )
     end subroutine alloc_huff
 !----------------------------------------------------------------------------------------- 
     subroutine sub_init_huff(i, j, c_code, huff)
@@ -1630,7 +1631,7 @@ contains
         type (huff_)       , intent(in out) :: huff
         huff%leng(i, j) = len_trim(c_code)
         read(c_code, '(b20.0)') huff%icod(i, j)
-    end subroutine sub_init_huff
+      end subroutine sub_init_huff
 !----------------------------------------------------------------------------------------- 
     subroutine init_huffman_quadruples()
         huff_qa(0,0,0,0)%leng = 1

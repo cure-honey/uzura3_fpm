@@ -19,7 +19,7 @@ module mod_layer3
     !
     type (scale_factor), save :: scfct(2, 2)
     type (side_info_  ), save :: side_info
-    integer :: iscfband_l(0:20, 3, 0:2), iscfband_s(0:11, 3, 0:2)
+    integer, save :: iscfband_l(0:20, 3, 0:2), iscfband_s(0:11, 3, 0:2)
 contains
     !------------------------------------------------------------------------------------------------
     subroutine init_scalefactor_bands(n) ! iso table b.8 layer iii scalefactor bands
@@ -55,8 +55,10 @@ contains
         integer               , intent(   out) :: i_mdct(:, :, :), max_bits, ianc
         type (mpeg_parameters), intent(in out) :: mpg
         integer :: ibit, ibit2, ichannel, nchannel, igranule, iused_bits, nused_bits, & 
-                   mbits(size(r_mdct, 3), size(r_mdct, 4))
-        real (kind = kd) ::  tot_int(size(r_mdct, 3), size(r_mdct, 4))
+                   mbits(size(r_mdct, 3), size(r_mdct, 4)), i, j, k
+        real (kind = kd) ::  x_norm1(size(r_mdct, 3), size(r_mdct, 4))
+        real (kind = kd) ::  wk_mdct(size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
+        real (kind = kd) ::  r0_mdct(size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
         real (kind = kd) ::  x_mask (size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
         real (kind = kd) ::  x_noise(size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
         real (kind = kd) ::  z_noise(size(r_mdct, 1), size(r_mdct, 2))
@@ -64,33 +66,56 @@ contains
         nchannel = size(r_mdct, 4)
         call init_scale_factor()
         call init_side_info(mblock_type)
-        call mid_side_mdct(mpg, r_mdct)
-        !call mid_side_fft(mpg, r_mdct)
-        call calc_totint(r_mdct, tot_int)
+        do igranule = 1, 2
+            do ichannel = 1, nchannel   
+                call calc_mask(igranule, ichannel, mblock_type(igranule, ichannel), &
+                               x_mask(:, :, igranule, ichannel), x_noise(:, :, igranule, ichannel) )
+            end do ! x_mask <--(averaged x_noise)
+        end do
+!--- LR <--> MS decision     
+        call mid_side_select_mdct(mpg, r_mdct)
+        r0_mdct = r_mdct       
+! cut masked signals       
+!        if (q_mask) where(abs(r_mdct) < x_noise) r_mdct = 0.0_kd
+        if (q_mask) where(abs(r_mdct) < x_mask) r_mdct = 0.0_kd 
+!        if (q_mask) print *, count(abs(r_mdct) < x_mask)
+!        if (q_mask) print *, count(abs(r_mdct) < x_noise)        
+!--- bit allocatiion between 2 granules * nchannel
+!        call change_to_mid_side(mpg, r_mdct, wk_mdct) 
+!        call change_to_mid_side(mpg, sign(x_noise, r0_mdct), wk_mdct) 
+!        call change_to_mid_side(mpg, sign(x_mask, r_mdct), wk_mdct) 
+        call change_to_mid_side(mpg, r_mdct / max(x_mask, tiny(0.0_kd)), wk_mdct)
+     
+!---        
+!        if (q_mask) where(abs(r0_mdct) < x_noise) wk_mdct = 0.0_kd 
+!        if (q_mask) where(abs(r0_mdct) < x_mask) wk_mdct = 0.0_kd 
+ 
+        call calc_norm(wk_mdct, x_norm1)
         call get_maxbits(mpg, max_bits)
-        call mean_bits  (mpg, max_bits, tot_int, mbits, nused_bits)
+        call mean_bits  (mpg,  mblock_type, max_bits, x_norm1, mbits, nused_bits)
+!--- LR => MS / LR => LR 
+        call change_to_mid_side(mpg, r_mdct, wk_mdct) 
         ibit2 = 0 ! remain bits
         do igranule = 1, 2
             do ichannel = 1, nchannel   
                 ibit = mbits(igranule, ichannel) + ibit2
-                call calc_mask(igranule, ichannel, mblock_type(igranule, ichannel), &
-                                                   x_mask(:, :, igranule, ichannel), x_noise(:, :, igranule, ichannel) )
-                if (q_mask) where (abs(r_mdct(:, :, igranule, ichannel)) < x_mask(:, :, igranule, ichannel)) &
-                                       r_mdct(:, :, igranule, ichannel) = 0.0_kd 
-                ! begin test
+                ! noise for MS: 1/sqrt(2)*min(noiseR, noiseL)
                 if ( mpg%mode == 1 .and. ichannel == 1) then
-                    z_noise(:, :) = abs( sign(1.0_kd, r_mdct(:, :, igranule, 1)) * x_noise(:, :, igranule, 1) &
-                                       + sign(1.0_kd, r_mdct(:, :, igranule, 2)) * x_noise(:, :, igranule, 2) ) / sqrt(2.0_kd) ! left
+                    z_noise(:, :) = sqrt(0.5_kd)  &
+!                                  * min(x_noise(:, :, igranule, 1), x_noise(:, :, igranule, 2)) 
+                                  * min(x_mask(:, :, igranule, 1), x_mask(:, :, igranule, 2)) 
                 else if ( mpg%mode == 1 .and. ichannel == 2) then
-                     z_noise(:, :) = abs( sign(1.0_kd, r_mdct(:, :, igranule, 1)) * x_noise(:, :, igranule, 1) &
-                                        - sign(1.0_kd, r_mdct(:, :, igranule, 2)) * x_noise(:, :, igranule, 2) ) / sqrt(2.0_kd) ! right
+                    z_noise(:, :) = sqrt(0.5_kd)  &
+!                                  * min(x_noise(:, :, igranule, 1), x_noise(:, :, igranule, 2)) 
+                                  * min(x_mask(:, :, igranule, 1), x_mask(:, :, igranule, 2)) 
                 else
-                     z_noise(:, :) = x_noise(:, :, igranule, ichannel)
+!                    z_noise(:, :) = x_noise(:, :, igranule, ichannel) 
+                    z_noise(:, :) = x_mask(:, :, igranule, ichannel) 
                 end if
-                ! end test
-                if ( tot_int(igranule, ichannel) /= 0.0_kd ) then
+!
+                if ( x_norm1(igranule, ichannel) /= 0.0_kd ) then
                     call outer_loop(ibit, mblock_type(igranule, ichannel), &
-                                        r_mdct (:, :, igranule, ichannel), z_noise(:, :), &
+                                       wk_mdct (:, :, igranule, ichannel), z_noise(:, :), &
                                         i_mdct (:   , igranule, ichannel), side_info%sub(igranule, ichannel), &
                                                 scfct(igranule, ichannel), iused_bits)
                 else 
@@ -103,7 +128,7 @@ contains
 
                 ! debug info
                 ntable (side_info%sub(igranule, ichannel)%itable_select(1)) = &
-                    ntable (side_info%sub(igranule, ichannel)%itable_select(1)) + 1
+                  ntable (side_info%sub(igranule, ichannel)%itable_select(1)) + 1
                 ntable (side_info%sub(igranule, ichannel)%itable_select(2)) = & 
                     ntable (side_info%sub(igranule, ichannel)%itable_select(2)) + 1
                 ntable (side_info%sub(igranule, ichannel)%itable_select(3)) = &
@@ -182,55 +207,72 @@ contains
         end do
     end subroutine init_side_info
 !------------------------------------------------------------------------------------------------
-    subroutine mid_side_mdct(mpg, r_mdct) ! iso  c.2.4.3.4.9.2,  g.2 ms_stereo and intensity stereo coding layer iii
-        real (kind = kd)       , intent(in out) :: r_mdct(:, :, :, :)
+    subroutine mid_side_select_mdct(mpg, r_mdct) ! iso  c.2.4.3.4.9.2,  g.2 ms_stereo and intensity stereo coding layer III
+        real (kind = kd)      , intent(in    ) :: r_mdct(:, :, :, :)
         type (mpeg_parameters), intent(in out) :: mpg
-        integer         :: igranule, nchannel, n0, n1
-        real (kind = kd) :: tmp_ms(32, 18, 2, 2), tmp1, tmp2
-        logical         :: qms
+        integer          :: igranule, nchannel
+        real (kind = kd) :: tmp_ms(32, 18, 2, 2), tmp1, tmp2, tmp3, tmp4, factor, pi
+        logical          :: qms
+        integer :: n0, n1
+        pi = 4.0_kd * atan(1.0_kd)
         nchannel = size(r_mdct, 4)
         qms = qms_stereo
         select case (mpg%isample_rate) ! threshold ~ 7khz (empirical value)
         case (0) ! 44.1khz
-            n0 = 10
+            n0 = 183
         case (1) ! 48.0khz
-            n0 =  9
+            n0 = 168
         case (2) ! 32.0khz
-            n0 = 14
+            n0 = 252
         case default
             stop ' sample_rate error : subroutine mid_side '
         end select
-        n1 = n0 + 1
+        !
+        ! empirical 
         do igranule = 1, 2
-        ! pop music often have different l-r behavior in low and high frequency 
-            tmp1 = sum( abs( r_mdct( 1:n0, :, igranule, 1)**2 - r_mdct( 1:n0, :, igranule, 2)**2 ) ) 
-            tmp2 = sum(    ( r_mdct( 1:n0, :, igranule, 1)**2 + r_mdct( 1:n0, :, igranule, 2)**2 ) ) 
-            if ( tmp1 > xms * tmp2 ) then 
-                qms = .false.
-                ns1 = ns1 + 1
-                ns  = ns  + 1
-            else
-                tmp1 = sum( abs( r_mdct(n1:32, :, igranule, 1)**2 - r_mdct(n1:32, :, igranule, 2)**2 ) ) 
-                tmp2 = sum(    ( r_mdct(n1:32, :, igranule, 1)**2 + r_mdct(n1:32, :, igranule, 2)**2 ) ) 
-                if ( tmp1 > xms * tmp2 * 0.95_kd) then ! cheat
-                   qms = .false.
-                   ns2 = ns2 + 1
-                   ns  = ns  + 1
-                end if 
-            end if
-        end do
-
+            tmp1 = sum( abs( r_mdct(1:n0, :, igranule, 1) - r_mdct(1:n0, :, igranule, 2) ) ) 
+            tmp2 = sum( abs( r_mdct(1:n0, :, igranule, 1) + r_mdct(1:n0, :, igranule, 2) ) )
+            tmp3 = sum( abs( r_mdct(1:n0, :, igranule, 1)) )
+            tmp4 = sum( abs( r_mdct(1:n0, :, igranule, 2)) )
+        end do    
+        if (  min(tmp1, tmp2) > xms * max(tmp1, tmp2) .or. &
+        .not. min(tmp3, tmp4) > xms * max(tmp3, tmp4)        ) then ! normal stereo
+            ns1 = ns1 + 1
+            ns  = ns  + 1
+            qms = .false.
+        end if 
+        !
+        do igranule = 1, 2
+            tmp1 = sum( abs( r_mdct(:, :, igranule, 1) - r_mdct(:, :, igranule, 2) ) ) 
+            tmp2 = sum( abs( r_mdct(:, :, igranule, 1) + r_mdct(:, :, igranule, 2) ) )
+            tmp3 = sum( abs( r_mdct(:, :, igranule, 1)) )
+            tmp4 = sum( abs( r_mdct(:, :, igranule, 2)) )
+        end do    
+        if (  min(tmp1, tmp2) > 0.95_kd * xms * max(tmp1, tmp2) .or. &
+        .not. min(tmp3, tmp4) > 0.95_kd * xms * max(tmp3, tmp4)        ) then ! normal stereo
+            if (qms) ns = ns  + 1
+            ns2 = ns2 + 1
+            qms = .false.
+        end if 
+        !
+        ! inner product
+        !
+    !    do igranule = 1, 2
+    !        tmp1 = sum(  (r_mdct(:, :, igranule, 1) + r_mdct(:, :, igranule, 2)) &
+    !                   * (r_mdct(:, :, igranule, 1) - r_mdct(:, :, igranule, 2)) ) &
+    !          / sqrt( sum(r_mdct(:, :, igranule, 1) + r_mdct(:, :, igranule, 2))**2 &
+    !                * sum(r_mdct(:, :, igranule, 1) - r_mdct(:, :, igranule, 2))**2 )
+    !        tmp3 = sum( r_mdct(:, :, igranule, 1) * r_mdct(:, :, igranule, 2) )  &
+    !            / sqrt(sum( r_mdct(:, :, igranule, 1)**2) * sum( r_mdct(:, :, igranule, 2)**2 ) ) 
+    !
+    !        if ( abs(tmp1) < cos(pi/4) .or. abs(tmp3) > cos(pi/4) ) then ! normal stereo
+    !            if (qms) ns = ns  + 1
+    !           ! ns2 = ns2 + 1
+    !            qms = .false.
+    !        end if        
+    !    end do    
         !
         if (qms) then 
-            if (nchannel == 2) then
-                tmp_ms(:, :, :, 1) = ( r_mdct(:, :, :, 1) + r_mdct(:, :, :, 2) ) / sqrt(2.0_kd)
-                tmp_ms(:, :, :, 2) = ( r_mdct(:, :, :, 1) - r_mdct(:, :, :, 2) ) / sqrt(2.0_kd)
-            else
-                tmp_ms(:, :, :, 1) = ( r_mdct(:, :, :, 1) ) / sqrt(2.0_kd)
-                tmp_ms(:, :, :, 2) = ( r_mdct(:, :, :, 1) ) / sqrt(2.0_kd)
-            end if
-            r_mdct(:, :, :, 1) = tmp_ms(:, :, :, 1)
-            r_mdct(:, :, :, 2) = tmp_ms(:, :, :, 2)
             mpg%mode            =  1 ! joint stereo
             mpg%mode_extension  =  2 ! intensity_stereo off / ms_stereo on
             ms = ms + 1
@@ -238,10 +280,11 @@ contains
             mpg%mode            =  0 ! normal stereo
             mpg%mode_extension  =  0 ! intensity_stereo off / ms_stereo off
         end if
-    end subroutine mid_side_mdct
+    end subroutine mid_side_select_mdct
 !------------------------------------------------------------------------------------------------
-    subroutine mid_side_fft(mpg, r_mdct) ! iso  c.2.4.3.4.9.2,  g.2 ms_stereo and intensity stereo coding layer iii
-        real (kind = kd)       , intent(in out) :: r_mdct(:, :, :, :)
+    subroutine change_to_mid_side(mpg, r_mdct, ms_mdct) ! iso  c.2.4.3.4.9.2,  g.2 ms_stereo and intensity stereo coding layer III
+        real (kind = kd)      , intent(in    ) ::  r_mdct(:, :, :, :)
+        real (kind = kd)      , intent(   out) :: ms_mdct(:, :, :, :)
         type (mpeg_parameters), intent(in out) :: mpg
         real (kind = kd) :: tmp_ms(32, 18, 2, 2)
         integer :: nchannel
@@ -252,24 +295,25 @@ contains
                 tmp_ms(:, :, :, 1) = ( r_mdct(:, :, :, 1) + r_mdct(:, :, :, 2) ) / sqrt(2.0_kd)
                 tmp_ms(:, :, :, 2) = ( r_mdct(:, :, :, 1) - r_mdct(:, :, :, 2) ) / sqrt(2.0_kd)
             else
-                tmp_ms(:, :, :, 1) = ( r_mdct(:, :, :, 1) ) / sqrt(2.0_kd)
-                tmp_ms(:, :, :, 2) = ( r_mdct(:, :, :, 1) ) / sqrt(2.0_kd)
+                tmp_ms(:, :, :, 1) = r_mdct(:, :, :, 1) / sqrt(2.0_kd)
+                tmp_ms(:, :, :, 2) = r_mdct(:, :, :, 1) / sqrt(2.0_kd)
             end if
-            r_mdct(:, :, :, 1) = tmp_ms(:, :, :, 1)
-            r_mdct(:, :, :, 2) = tmp_ms(:, :, :, 2)
+            ms_mdct = tmp_ms
+        else
+            ms_mdct = r_mdct
         end if
-    end subroutine mid_side_fft
+    end subroutine change_to_mid_side
 !------------------------------------------------------------------------------------------------
-    subroutine calc_totint(r_mdct, tot_int)
+    subroutine calc_norm(r_mdct, x_norm1)
         real (kind = kd) , intent(in ) :: r_mdct (:, :, :, :)
-        real (kind = kd) , intent(out) :: tot_int(:, :)
+        real (kind = kd) , intent(out) :: x_norm1(:, :)
         integer :: igranule, ichannel
         do igranule = 1, 2
             do ichannel = 1, size(r_mdct, 4)
-                tot_int(igranule, ichannel) = sum( abs(r_mdct(:, :, igranule, ichannel))**0.75 )**(1/0.75)
-            end do
+                x_norm1(igranule, ichannel) = sum( abs(r_mdct(:, :, igranule, ichannel)) ) 
+             end do
         end do
-    end subroutine calc_totint
+    end subroutine calc_norm
 !------------------------------------------------------------------------------------------------
     subroutine get_maxbits(mpg, max_bits) ! after iso 2.4.3.1 & 2.4.2.3 padding (p.22)
         type (mpeg_parameters), intent(in out) :: mpg
@@ -288,12 +332,12 @@ contains
         max_bits = ( islot_size + mpg%ipadding ) * 8
     end subroutine get_maxbits 
 !-------------------------------------------------------------------------------------------------
-    subroutine mean_bits(mpg, max_bits, tot_int, mbits, iused_bits)
+    subroutine mean_bits(mpg, mblock_type, max_bits, x_norm1, mbits, iused_bits)
         type (mpeg_parameters), intent(in ) :: mpg
-        integer               , intent(in ) :: max_bits
-        real (kind = kd)      , intent(in ) :: tot_int(:, :)
+        integer               , intent(in ) :: max_bits,  mblock_type(:, :)
+        real (kind = kd)      , intent(in ) :: x_norm1(:, :)
         integer               , intent(out) :: mbits(:, :), iused_bits
-        integer                             :: nbits, nchannel
+        integer                             :: nbits, nchannel, limbits
         nchannel = size(mbits, 2)
         if (nchannel == 1) then
             iused_bits =  32 + 136 ! monoral
@@ -303,13 +347,17 @@ contains
         if (mpg%icrc == 0) iused_bits = iused_bits + 16
         nbits = max_bits - iused_bits
         !
-  !  bug  
-        !!  distribute bits between 2 granules * n channels according to total intensity 
-        mbits = int( (max_bits - iused_bits) * &
-                     (factor * tot_int / sum(tot_int + epsilon(0.0)) + (1.0_kd - factor) / 2 / nchannel ) )
-        !!             variable part                                     consant part      
-        mbits(1, 1) = mbits(1, 1) + nbits - sum(mbits)
-
+        !! CRITICAL  
+        !  distributes bits between 2 granules * n channels according to total intensities 
+        !  proportinal to the 1-norms of noise 
+        mbits = int(nbits) * x_norm1 / sum(x_norm1 + tiny(0.0_kd))
+        !
+        !  avoids too many bits at high bitrate   
+        limbits = 4000  
+        do while (maxval(mbits) > limbits) 
+            where (mbits > limbits) mbits = limbits 
+            where (mbits < limbits) mbits = (nbits - limbits * count(mbits == limbits)) / count(mbits /= limbits)
+        end do
     end subroutine mean_bits
 !------------------------------------------------------------------------------------------------
     subroutine outer_loop(iallowed_bits, iblock_type, r_mdct, x_noise, iwk, side, sc_fac, iused_bits) ! iso c.1.5.4.3
@@ -327,7 +375,10 @@ contains
         type (scale_factor) :: sc_fac_best
         logical             :: qexit, qfirst
         distortion_min = 1.0d10
-        scale0:do iscale = 0, 1                  ! scalefactor_scale loop                          ! iso c.1.5.4.3
+        ibits_best = 0
+        iwk_best = 0
+        !
+        scale0:do iscale = 0, 1                     ! scalefactor_scale loop                          ! iso c.1.5.4.3
             side%iscalefac_scale = iscale           ! 0: sqrt(2) or 1: 2
             side%ipreflag = 0                       ! start with preemphasis off                      ! iso c.1.5.4.3.4
             side%isubblock_gain = 0
@@ -336,44 +387,55 @@ contains
                 sc_fac%long = 0                        ! clear scale factor 
                 sc_fac%ishort = 0                      ! clear scale factor
                 do                                     ! scalefactor loop
-                   call select_compress(iblock_type, sc_fac     , side%iscalefac_compress)
-                   call calc_scfac_bit (iblock_type, iscfac_bits, side%iscalefac_compress) 
-                   call reorder(iblock_type, r_mdct , wk, icut)
-                   call reorder(iblock_type, x_noise, th,   32)
-                   call calc_scale(iblock_type, iscale, sc_fac, npretab(:, side%ipreflag), side%isubblock_gain, sc)
-                   wk = sc * wk 
-                   th = sc * th 
-                   call inner_loop(iallowed_bits - iscfac_bits, iblock_type, wk, iwk, side, ihuff_bits) ! iso c.1.5.4.3.2
-                   call calc_distortion(iblock_type, side%iglobal_gain, &                               ! iso c.1.5.4.3.3 
+                    call select_compress(iblock_type, sc_fac     , side%iscalefac_compress)
+                    call calc_scfac_bit (iblock_type, iscfac_bits, side%iscalefac_compress) 
+                    call reorder(iblock_type, r_mdct , wk, icut)
+                    call reorder(iblock_type, x_noise, th,   32)
+                    call calc_scale(iblock_type, iscale, sc_fac, npretab(:, side%ipreflag), side%isubblock_gain, sc)
+                    wk = sc * wk 
+                    th = sc * th 
+     
+                    if ( iallowed_bits - iscfac_bits < 0) exit scale0
+ 
+                    call inner_loop(iallowed_bits - iscfac_bits, iblock_type, wk, iwk, side, ihuff_bits) ! iso c.1.5.4.3.2
+                    call calc_distortion(iblock_type, side%iglobal_gain, &                               ! iso c.1.5.4.3.3 
                                         wk, iwk, th, sc, iover_l, iover_s, distortion)
-                   if (distortion < distortion_min) then      ! save best parameters                    ! iso c.1.5.4.3.1
-                       distortion_min = distortion
-                       sc_fac_best    = sc_fac                   ! scale factors
-                       side_best      = side                     ! side informations
-                       iwk_best       = iwk                      ! 576 quantized data
-                       ibits_best     = iscfac_bits + ihuff_bits ! required bits for scale_factors & huffman codes
-                   else
-                       if (distortion > skip * distortion_min) exit ! short cut to avoid meaningless search
-                       if (sum(iover_l) == 20) exit ! short cut :long-block
-                       if (sum(iover_s) == 36) exit ! short cut :short-block
-                       if (sum(iover_l) ==  9 .and. sum(iover_s) == 27) exit ! short cut :mixed-block
-                   end if
-                   if ( sum(iover_l) + sum(iover_s) == 0 ) exit scale0 ! if converged return            ! iso c.1.5.4.3.6
-                   if ( qfirst .and. sum(iover_l(17:20)) == 4 ) then                                    ! iso c.1.5.4.3.4
-                       side%ipreflag = 1                         ! restart inner_loop with preemphasis on  
-                       qfirst        = .false.
-                       cycle
-                   else
-                       qfirst        = .false.
-                   end if
-                   call increase_scale_factor(iblock_type, iover_l, iover_s, sc_fac, qexit)             ! iso c.1.5.4.3.5  
-                   if (qexit) exit                           ! when scale_factor reached maximum value defined by iso 
-              end do
-              call calc_subblock_gain(iblock_type, iover_s, side%isubblock_gain, qexit) 
-              if (qexit) exit                           ! if no subblock_gain increased exit       ! iso c.1.5.4.3.6  
+
+                    if ( distortion < distortion_min ) then       ! save best parameters                    ! iso c.1.5.4.3.1
+                        distortion_min = distortion
+                        sc_fac_best    = sc_fac                   ! scale factors
+                        side_best      = side                     ! side informations
+                        iwk_best       = iwk                      ! 576 quantized data
+                        ibits_best     = iscfac_bits + ihuff_bits ! required bits for scale_factors & huffman codes
+                    else
+                        if ( distortion > skip * distortion_min ) exit ! short cut to avoid meaningless search
+                    end if
+                    if ( sum(iover_l) + sum(iover_s) == 0 .and. distortion < distortion_min ) then 
+                        exit scale0 ! if converged return              ! iso c.1.5.4.3.6
+                    else if ( sum(iover_l) + sum(iover_s) == 0 ) then  ! iso c.1.5.4.3.6 
+                        exit
+                    !    iover_l = 1   ! extra serach for minimun distortion
+                    !    iover_s = 1
+                    end if
+!
+                    if ( qfirst .and. any(iover_l(11:20) > 0) ) then   ! iso c.1.5.4.3.4
+                        side%ipreflag = 1                              ! restart inner_loop with preemphasis on  
+                        qfirst = .false.
+                        cycle
+                    else
+                        qfirst = .false.
+                    end if
+                    call increase_scale_factor(iblock_type, iover_l, iover_s, sc_fac, qexit)         ! iso c.1.5.4.3.5  
+                    if (qexit) exit                           ! when scale_factor reached maximum value defined by iso 
+                end do
+!
+                call calc_subblock_gain(iblock_type, iover_s, side%isubblock_gain, qexit) 
+                if (qexit) exit                           ! if no subblock_gain increased exit       ! iso c.1.5.4.3.6  
             end do 
+            exit
         end do scale0
-        distortion = distortion_min                  ! retrieve best parameters and return
+        ! retrieve best parameters and return
+        distortion = distortion_min                  
         sc_fac     = sc_fac_best
         side       = side_best 
         iwk        = iwk_best
@@ -441,12 +503,12 @@ contains
         n2 = 0
         do iscband =  0, 5
             do iwin = 1, 3
-                n1 = max(n1, iget_len(sc_fac%ishort(iscband, iwin)) )  
+                n1 = max( n1, iget_len(sc_fac%ishort(iscband, iwin)) )  
             end do
         end do
         do iscband = 6, 11
             do iwin = 1, 3
-                n2 = max(n2, iget_len(sc_fac%ishort(iscband, iwin)) )  
+                n2 = max( n2, iget_len(sc_fac%ishort(iscband, iwin)) )  
             end do
         end do
         do i = 0, 15
@@ -540,8 +602,8 @@ contains
     end subroutine increase_scale_factor
 !------------------------------------------------------------------------------------------------
     subroutine calc_scfac_bit(iblock_type, nbits, icompress)  ! iso 2.4.3.4.5
-        integer            , intent(out) :: nbits
-        integer            , intent(in ) :: iblock_type, icompress
+        integer, intent(out) :: nbits
+        integer, intent(in ) :: iblock_type, icompress
         select case (iblock_type)
         case (0, 10, 11, 30, 31)
             nbits = 11 * len_scale_compress(icompress, 1) + 10 * len_scale_compress(icompress, 2)  
@@ -586,7 +648,7 @@ contains
             wk(k:k + 18 - 1) = r_mdct(iband, 1:18)
             k = k + 18
         end do
-        wk(iscalefactorband_l(20, 3) + 2:) = wk(iscalefactorband_l(20, 3) + 2:) * cut_factor
+        wk(iscalefactorband_l(20, 3) + 2:) = wk(iscalefactorband_l(20, 3) + 2:)
     end subroutine reorder_long
 !..................................................................................................
     subroutine reorder_short(k, n0, n1, iscfb0, iscfb1, r_mdct, wk)
@@ -617,15 +679,15 @@ contains
         end do
         n = (576 - k + 1) / 3
         do iwin = 1, 3
-            wk(k:k + n - 1) = wk0(k0:k0 + n - 1, iwin) * cut_factor
+            wk(k:k + n - 1) = wk0(k0:k0 + n - 1, iwin)
             k = k + n
         end do
     end subroutine reorder_short
 !------------------------------------------------------------------------------------------
     subroutine calc_subblock_gain(iblock_type, iover_s, isubblock_gain, qexit) ! iso 2.4.2.7 subblock_gain, 2.4.3.4.7.1
-        integer        , intent(in    ) :: iblock_type, iover_s(0:11, 3)
-        integer        , intent(in out) :: isubblock_gain(:) 
-        logical        , intent(   out) :: qexit
+        integer, intent(in    ) :: iblock_type, iover_s(0:11, 3)
+        integer, intent(in out) :: isubblock_gain(:) 
+        logical, intent(   out) :: qexit
         select case (iblock_type)
         case (0, 10, 11, 30, 31)
             qexit = .true.
@@ -639,9 +701,9 @@ contains
     end subroutine calc_subblock_gain
 !------------------------------------------------------------------------------------------
     subroutine sub_subblock_gain(iover_s, isubblock_gain, qexit)
-        integer        , intent(in    ) :: iover_s(0:11, 3)
-        integer        , intent(in out) :: isubblock_gain(:)
-        logical        , intent(   out) :: qexit
+        integer, intent(in    ) :: iover_s(0:11, 3)
+        integer, intent(in out) :: isubblock_gain(:)
+        logical, intent(   out) :: qexit
         integer :: iwin
         qexit = .true.
         do iwin = 1, 3
@@ -707,10 +769,10 @@ contains
     end subroutine calc_scale_short
 !------------------------------------------------------------------------------------------
     subroutine calc_distortion(iblock_type, iglobal_gain, x, ix, th, sc, iover_l, iover_s, distortion) ! iso c.1.5.4.3.3
-        real (kind = kd) , intent(in ) :: x(:), th(:), sc(:)
+        real (kind = kd), intent(in ) :: x(:), th(:), sc(:)
         integer         , intent(in ) :: iblock_type, iglobal_gain, ix(:)
         integer         , intent(out) :: iover_l(0:), iover_s(0:, :) 
-        real (kind = kd) , intent(out) :: distortion 
+        real (kind = kd), intent(out) :: distortion 
         iover_l = 0
         iover_s = 0
         select case (iblock_type)
@@ -749,15 +811,15 @@ contains
             end do
         end do
         where (ds2 > as2) iover_l = 1
-    ! band 21
-    !    istart = iscalefactorband_l(20, 3) + 2
-    !    iend   = 576
-    !    bw     = real(iend - istart + 1, kind = kd)  
-    !    do i = istart, iend
-    !        dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
-    !                       * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
-    !        distortion = distortion + abs(dx) / bw     
-    !    end do
+        ! band 21
+        istart = iscalefactorband_l(20, 3) + 2
+        iend   = 576
+        bw     = real(iend - istart + 1, kind = kd)  
+        do i = istart, iend
+            dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
+                           * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
+            distortion = distortion + abs(dx) / bw     
+        end do
     end subroutine calc_dist_long
 !------------------------------------------------------------------------------------------------
     subroutine calc_dist_short(iglobal_gain, x, ix, th, sc, iover_s, distortion)
@@ -783,20 +845,20 @@ contains
                                    * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)  
                     ds2(iscband, iwin) = ds2(iscband, iwin) + abs(dx) / bw   
                     as2(iscband, iwin) = as2(iscband, iwin) + th(k) / bw   
-                    distortion = distortion + abs(dx) /sc(i) / bw
+                    distortion = distortion + abs(dx) / sc(k) / bw
                 end do
             end do
         end do
         where (ds2 > as2) iover_s = 1
-    ! band 12
-    !    istart = iscalefactorband_s(11, 3) + 2
-    !    iend   = 576
-    !    bw     = real(iend - istart + 1, kind = kd)  
-    !    do i = istart, iend
-    !        dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
-    !                       * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
-    !        distortion = distortion + abs(dx) / bw
-    !    end do
+        ! band 12
+        istart = iscalefactorband_s(11, 3) + 2
+        iend   = 576
+        bw     = real(iend - istart + 1, kind = kd)  
+        do i = istart, iend
+            dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
+                           * 2.0_kd**(real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
+            distortion = distortion + abs(dx) / bw
+        end do
     end subroutine calc_dist_short
 !------------------------------------------------------------------------------------------
     subroutine calc_dist_mixed(iglobal_gain, x, ix, th, sc, iover_l, iover_s, distortion)
@@ -824,7 +886,7 @@ contains
                                * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd) 
                 ds2_l(iscband) = ds2_l(iscband) + abs(dx) / bw
                 as2_l(iscband) = as2_l(iscband) + th(k) / bw
-                distortion = distortion + abs(dx) /sc(i) / bw
+                distortion = distortion + abs(dx) / sc(k) / bw
             end do
             if (ds2_l(iscband) > as2_l(iscband)) iover_l(iscband) = 1
         end do
@@ -836,23 +898,23 @@ contains
                 do i = istart, iend
                     k = k + 1
                     dx = abs(x(k)) - real(abs(ix(k)), kind = kd)**(4.0_kd / 3.0_kd) & 
-                        * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)  
+                                   * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)  
                     ds2_s(iscband, iwin) = ds2_s(iscband, iwin) + abs(dx) / bw   
                     as2_s(iscband, iwin) = as2_s(iscband, iwin) + th(k) / bw   
-                    distortion = distortion + abs(dx) / sc(k)  / bw  
+                    distortion = distortion + abs(dx) / sc(k) / bw
                 end do
                 if (ds2_s(iscband, iwin) > as2_s(iscband, iwin)) iover_s(iscband, iwin) = 1
             end do
         end do
-    !   band 12
-    !    istart = iscalefactorband_s(11, 3) + 2
-    !    iend   = 576
-    !    bw     = real(iend - istart + 1, kind = kd)  
-    !    do i = istart, iend
-    !        dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
-    !                       * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
-    !        distortion = distortion + dx / bw     
-    !    end do
+        ! band 12
+        istart = iscalefactorband_s(11, 3) + 2
+        iend   = 576
+        bw     = real(iend - istart + 1, kind = kd)  
+        do i = istart, iend
+            dx = abs(x(i)) - real(abs(ix(i)), kind = kd)**(4.0_kd / 3.0_kd) &
+                           * 2.0_kd**( real(iglobal_gain - 210, kind = kd) / 4.0_kd)   
+            distortion = distortion + dx / bw     
+        end do
     end subroutine calc_dist_mixed
 !------------------------------------------------------------------------------------------------
 end module mod_layer3

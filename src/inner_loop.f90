@@ -26,14 +26,14 @@ contains
             if ( qfirst .and. iquantanf > -210 .and. maxval(i_mdct) <= 2**13 - 1) then ! 15 + 2**13 - 1
                 iquantanf = iquantanf - 63 ! in iso document 2.4.2.7 "big_values", the maximum absolute value is constrained to 8191 = 2^13 - 1.
                 cycle                      ! however it is possible to use up to 2^13 - 1 + 15 = 8206.   
-            else                        ! iso sample program dist10 uses 8206.
+            else                           ! iso sample program dist10 uses 8206.
                 qfirst = .false.           ! because iso documet section 2 is normative, 2^13 - 1 is chosen in uzura. 
             end if                              
-            if (maxval(i_mdct) > 2**13 - 1) then  ! bi-section method
+            if (maxval(i_mdct) > 2**13 - 1) then  ! bi-section method  ! ISO p.25 2.4.2.7
                 iq0 = iqquant                           
-                iquantanf = iquantanf + ndiv 
+                iquantanf = iquantanf + ndiv
             else
-             !  ndiv = ndiv / 2 ! bi-section
+            !    ndiv = ndiv / 2 ! bi-section
                 ndiv = int(ndiv * 0.618) ! fibonacchi
                 iqquant = iq0 + ndiv
             end if 
@@ -43,6 +43,14 @@ contains
         iq0     = iqquant
         do while (ndiv > 0)
             call quantization(iqquant, iquantanf, wk, i_mdct)
+
+            if (maxval(i_mdct) > 2**13 - 1) then ! some problem in estimating iquantanf
+                iquantanf = iquantanf + ndiv
+                iqquant = max(0, -iquantanf - 210)
+                iq0 = iqquant
+                cycle
+            end if    
+
             itot_bits = 0
             side%iglobal_gain = iqquant + iquantanf + 210 
             call divide(i_mdct, ibigvalues, icount1)
@@ -64,7 +72,7 @@ contains
                 call select_table2(i_mdct, n0 + 1, n1, itab, itot_bits)
                 side%itable_select(2) = itab
                 call select_table2(i_mdct, n1 + 1, ibigvalues * 2, itab, itot_bits)
-                side%itable_select(3) = itab
+                side%itable_select(3) = itab   
             case (10, 11, 30, 31) ! switching block
                 iregion0 = 7                
                 iregion1 = 36 
@@ -109,6 +117,7 @@ contains
                ndiv = int(ndiv * 0.618) ! fibonacchi
                iqquant = iq0 + ndiv 
             end if 
+
         end do
         where (wk < 0.0_kd) i_mdct = -i_mdct
     end subroutine inner_loop
@@ -119,7 +128,7 @@ contains
         integer :: i
         real (kind = kd) :: sfm, sum1, sum2, tmp
         sum1 =  0.0_kd
-        sum2 =  0.01_kd 
+        sum2 =  tiny(0.01_kd) 
         do i = 1, size(wk) ! 576
             tmp = wk(i)**2.0_kd
             if (tmp > 0.0_kd) sum1 = sum1 + log(tmp) 
@@ -130,9 +139,9 @@ contains
     end subroutine calc_quantanf
 !------------------------------------------------------------------------------------------------
     subroutine quantization(iqquant, iquantanf, r_mdct, i_mdct) ! iso c.1.5.4.4.1
-        integer        , intent(in ) :: iqquant, iquantanf
+        integer         , intent(in ) :: iqquant, iquantanf
         real (kind = kd), intent(in ) :: r_mdct(:)
-        integer        , intent(out) :: i_mdct(:)
+        integer         , intent(out) :: i_mdct(:)
         real (kind = kd) :: denom, tmp(576)
         denom = 2.0_kd ** ( -real(iqquant + iquantanf, kind = kd) / 4.0_kd )
         tmp    = abs(r_mdct) * denom
@@ -144,7 +153,7 @@ contains
         integer, intent(out) :: ibigvalues, icount1
         integer :: i, ibig, izero
         do i = 576, 110, -2
-            izero = i
+                izero = i
             if (i_mdct(i) /= 0 .or. i_mdct(i - 1) /= 0) exit 
         end do
         do i = izero, 110, -4
@@ -168,8 +177,8 @@ contains
             k2 = abs(i_mdct(i + 1))
             k3 = abs(i_mdct(i + 2))
             k4 = abs(i_mdct(i + 3))
-            isum0 = isum0 + huff_qa(k1, k2, k3, k4)%leng + k1 + k2 + k3 + k4 
-            isum1 = isum1 + huff_qb(k1, k2, k3, k4)%leng + k1 + k2 + k3 + k4
+            isum0 = isum0 + huff_qa(k1, k2, k3, k4)%leng + k1 + k2 + k3 + k4 ! k1+k2+k3+k4 
+            isum1 = isum1 + huff_qb(k1, k2, k3, k4)%leng + k1 + k2 + k3 + k4 ! sign bit for non 0; ki=-1,0,+1
         end do
         if (isum0 <= isum1) then
             itab = 0 ! use table a
@@ -262,17 +271,20 @@ contains
             end select    
         else
             do i = 16, 23
-                if (imax <= huff(i)%linmax + 15) then 
+                if (imax <= huff(i)%linmax) then 
                     itab1 = i
                     exit
                 end if
             end do
             do i = 24, 31
-                if (imax <= huff(i)%linmax + 15) then 
+                if (imax <= huff(i)%linmax) then 
                     itab2 = i
                     exit
                 end if
             end do
+
+            if (itab2 < 0 .or. itab2 > 31) print *, 'select_table2: tab', itab2, imax
+
             call count_bits(itab1, ix, n0, n1, isum1)
             call count_bits(itab2, ix, n0, n1, isum2)
             if (isum1 < isum2) then 
