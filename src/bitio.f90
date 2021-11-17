@@ -11,11 +11,11 @@ module bit_io
     character (len = 10000) :: bit_string
 contains
 !---------------------------------------------------------------------
-    subroutine abort(text)
+    subroutine abend(text)
         character (len = *), intent(in) :: text
-        write(*, *) 'abort:: ', text
+        write(*, *) 'abend:: ', text
         stop
-    end subroutine abort
+    end subroutine abend
 !-------------------------------------------------------------------
     subroutine open_mpg_file(iwrite, fname)
         integer, intent(in) :: iwrite
@@ -25,7 +25,7 @@ contains
         open(iw, file = fname, iostat = io, status = 'unknown', access = 'stream') 
         if (io /= 0) then
             write(*, '(a, i3, a, i3, 2a)') ' i/o error ', io, ' occuerred. file =', iw, ' file name ', fname
-            call abort('check output file! suggestion: file may be in use.')
+            call abend('check output file! suggestion: file may be in use.')
         end if
     end subroutine open_mpg_file
 !-------------------------------------------------------------------
@@ -41,7 +41,7 @@ contains
     subroutine put_bits(n, inp) 
         integer, intent(in) :: n, inp
         integer :: i 
-        if (n > 32) call abort('out of range: n must be < 32: subroutine put_bits')
+        if (n > 32) call abend('out of range: n must be < 32: subroutine put_bits')
         do i = 1, n
             if (ibits(inp, n - i, 1) == 1) then
                 bit_string(ip:ip) = '1'
@@ -74,7 +74,7 @@ contains
         character (len = *) :: str
         integer :: i
         do i = 1, len_trim(str)
-            if (str(i:i) /= '0' .and. str(i:i) /= '1') call abort('invalid string: subroutine put_bit_c')
+            if (str(i:i) /= '0' .and. str(i:i) /= '1') call abend('invalid string: subroutine put_bit_c')
             bit_string(ip:ip) = str(i:i)
             ip = ip + 1
         end do
@@ -85,7 +85,7 @@ contains
         integer :: i, j, ipos, m
         character(len = 4) ::cm
         equivalence (m, cm) ! integer*4 assumed for m
-        if (mod(n, 8) /= 0) call abort('input error: n must be multiples of 8: subroutine write_bits_1frame')
+        if (mod(n, 8) /= 0) call abend('input error: n must be multiples of 8: subroutine write_bits_1frame')
         ipos = 0
         do i = 1, n, 8
             m = 0

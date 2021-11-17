@@ -74,9 +74,9 @@ contains
     subroutine print_debug_info()
         if (q_info) then
             print '(a)', ' ======== parameters ========================================================='
-            print '(3(a, f8.2))', ' ath_min=', ath_min, ' ath_max=', ath_max, ' offset =', offset_l
-            print '(3(a, f8.2))', ' switch =', switch,  ' xsm    =', xsm    , ' xms    =', xms                
-            print '(2(a, f8.2))', ' tempo  =', tempo_l
+            print '(3(a, f8.2))', ' ath_min =', ath_min, ' ath_max  =', ath_max, ' offset =', offset_l
+            print '(3(a, f8.2))', ' switch  =', switch,  ' xsm      =', xsm    , ' xms    =', xms                
+            print '(2(a, f8.2))', ' tempo   =', tempo_l
             if (q_pnorm) print '(a, f8.2)', ' masking: p-norm =', pow 
             print '(a)', ' ======== info ==============================================================='
             print '(5(a, i7))', ' block type:long', long, ':short', nshort, ':mixed', mix, ':type1', m1, ':type3', m3

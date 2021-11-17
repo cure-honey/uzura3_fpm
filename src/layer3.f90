@@ -51,14 +51,14 @@ contains
     !------------------------------------------------------------------------------------------------
     subroutine alloc_bits(mblock_type, r_mdct, i_mdct, mpg, max_bits, ianc) ! iso c.1.5.4 
         integer               , intent(in    ) :: mblock_type(:, :)
-        real (kind = kd)      , intent(in out) :: r_mdct(:, :, :, :)
+        real (kind = kd)      , intent(in    ) :: r_mdct(:, :, :, :)
         integer               , intent(   out) :: i_mdct(:, :, :), max_bits, ianc
         type (mpeg_parameters), intent(in out) :: mpg
         integer :: ibit, ibit2, ichannel, nchannel, igranule, iused_bits, nused_bits, & 
-                   mbits(size(r_mdct, 3), size(r_mdct, 4)), i, j, k
+                   mbits(size(r_mdct, 3), size(r_mdct, 4))
         real (kind = kd) ::  x_norm1(size(r_mdct, 3), size(r_mdct, 4))
         real (kind = kd) ::  wk_mdct(size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
-        real (kind = kd) ::  r0_mdct(size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
+        real (kind = kd) ::  x_mdct (size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
         real (kind = kd) ::  x_mask (size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
         real (kind = kd) ::  x_noise(size(r_mdct, 1), size(r_mdct, 2), size(r_mdct, 3), size(r_mdct, 4))
         real (kind = kd) ::  z_noise(size(r_mdct, 1), size(r_mdct, 2))
@@ -74,27 +74,27 @@ contains
         end do
 !--- LR <--> MS decision     
         call mid_side_select_mdct(mpg, r_mdct)
-        r0_mdct = r_mdct       
+        x_mdct = r_mdct       
 ! cut masked signals       
 !        if (q_mask) where(abs(r_mdct) < x_noise) r_mdct = 0.0_kd
-        if (q_mask) where(abs(r_mdct) < x_mask) r_mdct = 0.0_kd 
-!        if (q_mask) print *, count(abs(r_mdct) < x_mask)
+        if (q_mask) where(abs(x_mdct) < x_mask) x_mdct = 0.0_kd 
+!        if (q_mask) print *, count(abs(r_mdct) < x_mask )
 !        if (q_mask) print *, count(abs(r_mdct) < x_noise)        
-!--- bit allocatiion between 2 granules * nchannel
+!--- bit allocatiion among 2 granules * nchannel : critical 
 !        call change_to_mid_side(mpg, r_mdct, wk_mdct) 
 !        call change_to_mid_side(mpg, sign(x_noise, r0_mdct), wk_mdct) 
-!        call change_to_mid_side(mpg, sign(x_mask, r_mdct), wk_mdct) 
-        call change_to_mid_side(mpg, r_mdct / max(x_mask, tiny(0.0_kd)), wk_mdct)
+!        call change_to_mid_side(mpg, sign(x_mask , r_mdct ), wk_mdct) 
+        call change_to_mid_side(mpg, x_mdct / max(x_mask, tiny(0.0_kd)), wk_mdct)
      
 !---        
 !        if (q_mask) where(abs(r0_mdct) < x_noise) wk_mdct = 0.0_kd 
-!        if (q_mask) where(abs(r0_mdct) < x_mask) wk_mdct = 0.0_kd 
+!        if (q_mask) where(abs(r0_mdct) < x_mask ) wk_mdct = 0.0_kd 
  
         call calc_norm(wk_mdct, x_norm1)
         call get_maxbits(mpg, max_bits)
-        call mean_bits  (mpg,  mblock_type, max_bits, x_norm1, mbits, nused_bits)
+        call mean_bits  (mpg, max_bits, x_norm1, mbits, nused_bits)
 !--- LR => MS / LR => LR 
-        call change_to_mid_side(mpg, r_mdct, wk_mdct) 
+        call change_to_mid_side(mpg, x_mdct, wk_mdct) 
         ibit2 = 0 ! remain bits
         do igranule = 1, 2
             do ichannel = 1, nchannel   
@@ -211,19 +211,19 @@ contains
         real (kind = kd)      , intent(in    ) :: r_mdct(:, :, :, :)
         type (mpeg_parameters), intent(in out) :: mpg
         integer          :: igranule, nchannel
-        real (kind = kd) :: tmp_ms(32, 18, 2, 2), tmp1, tmp2, tmp3, tmp4, factor, pi
+        real (kind = kd) :: tmp1, tmp2, tmp3, tmp4, pi
         logical          :: qms
-        integer :: n0, n1
+        integer :: n0
         pi = 4.0_kd * atan(1.0_kd)
         nchannel = size(r_mdct, 4)
         qms = qms_stereo
         select case (mpg%isample_rate) ! threshold ~ 7khz (empirical value)
         case (0) ! 44.1khz
-            n0 = 183
+            n0 = 10
         case (1) ! 48.0khz
-            n0 = 168
+            n0 = 9
         case (2) ! 32.0khz
-            n0 = 252
+            n0 = 14
         case default
             stop ' sample_rate error : subroutine mid_side '
         end select
@@ -332,9 +332,9 @@ contains
         max_bits = ( islot_size + mpg%ipadding ) * 8
     end subroutine get_maxbits 
 !-------------------------------------------------------------------------------------------------
-    subroutine mean_bits(mpg, mblock_type, max_bits, x_norm1, mbits, iused_bits)
+    subroutine mean_bits(mpg, max_bits, x_norm1, mbits, iused_bits)
         type (mpeg_parameters), intent(in ) :: mpg
-        integer               , intent(in ) :: max_bits,  mblock_type(:, :)
+        integer               , intent(in ) :: max_bits
         real (kind = kd)      , intent(in ) :: x_norm1(:, :)
         integer               , intent(out) :: mbits(:, :), iused_bits
         integer                             :: nbits, nchannel, limbits
@@ -350,7 +350,7 @@ contains
         !! CRITICAL  
         !  distributes bits between 2 granules * n channels according to total intensities 
         !  proportinal to the 1-norms of noise 
-        mbits = int(nbits) * x_norm1 / sum(x_norm1 + tiny(0.0_kd))
+        mbits = int(nbits * x_norm1 / sum(x_norm1 + tiny(0.0_kd)))
         !
         !  avoids too many bits at high bitrate   
         limbits = 4000  

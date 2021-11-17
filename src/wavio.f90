@@ -102,13 +102,13 @@ contains
         type (riff_chunk), intent(in out) :: riff
         call init_chunk_names(riff)
         if ( word32() == riff%chunk_id ) then    ! 'riff'?
-            write(*, '(a)', advance = 'no') ' ms riff '
+            write(*, '(a)', advance = 'no') ' MS RIFF '
         else
-            call abort('this is not ms-riff file!')
+            call abort('this is not MS RIFF file!')
         end if
         riff%ichunk_size = int32()
         if ( word32() == riff%format_type ) then ! 'wave'?
-            write(*, '(a)', advance = 'no') 'wav audio '
+            write(*, '(a)', advance = 'no') 'WAV audio '
         else
             write(*, *)
             call abort('this is not wav file!')

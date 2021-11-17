@@ -84,9 +84,9 @@ module mod_mpg
     real (kind = kd), save :: switch    =    2.0_kd      ! long/short window switching factor (see switch_q in psycho.f90)
     real (kind = kd), save :: xms       =    0.5_kd      ! ns/ms switching factor             (see mid_side in layer3.f90)
     real (kind = kd), save :: xsm       =    1.5_kd      ! short/mixed switching factor       (see mid_side in layer3.f90)
-    real (kind = kd), save :: offset_l  =  -50.0_kd ![db]! offset for masking [long]          (see psycho in psycho.f90)
+    real (kind = kd), save :: offset_l  =  -33.0_kd ![db]! offset for masking [long]          (see psycho in psycho.f90)
     real (kind = kd), save :: tempo_l   =   0.85_kd      ! temporal masking parameter [long]  (see psycho in psycho.f90)
-    real (kind = kd), save :: pow       =    0.5_kd      ! spreading p-norm           [long]  (see psycho in psycho.f90)
+    real (kind = kd), save :: pow       =    0.3_kd      ! spreading p-norm           [long]  (see psycho in psycho.f90)
     real (kind = kd), save :: skip      =   10.0_kd      ! exit outer loop if distortion increased by factor of skip  
     real (kind = kd), save :: r0 = 0.33_kd, r1 = 0.75_kd ! iso suggests r0 = 0.33_kd, r1 = 0.75_kd (see layer3.f90)
     real (kind = kd), save :: cut_factor = 1.0_kd        ! cuth

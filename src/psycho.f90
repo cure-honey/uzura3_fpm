@@ -7,14 +7,14 @@ module mod_psycho
     public :: psycho, calc_mask  ! subroutine
     real (kind = kd), save :: pi, pi2 
     real (kind = kd), save :: ath_l(576) , ath_s(192, 3)
-    real (kind = kd), save :: sf_l(576, 576), sf_s(192, 192)
-    real (kind = kd), save :: dbsf_l(576, 576), dbsf_s(192, 192) 
-    real (kind = kd), save :: afft_l(576, 2, 2), afft_s(192, 3, 2, 2)
-    real (kind = kd), save :: dbfft_l(576, 2, 2), dbfft_s(192, 3, 2, 2)
+    real (kind = kd), save :: sf_l(576, 576)
+    real (kind = kd), save :: dbsf_l(576, 576)
+    real (kind = kd), save :: afft_l(576, 2, 2)
+    real (kind = kd), save :: dbfft_l(576, 2, 2)
     real (kind = kd), save :: arg_l(576, 2, 2), arg_s(192, 3, 2, 2)
     real (kind = kd), save :: freq_l(576), freq_s(192), bark_l(576), bark_s(192), bw_l(576), bw_s(192)
     real (kind = kd), save :: weight_l(576), weight_s(192)
-    complex (kind = kd), save :: cfft_l(1152, 2, 2),  cfft_s(384, 3, 2, 2)
+    complex (kind = kd), save :: cfft_l(1152, 2, 2)
     integer, save          :: ibark_l(576), ibark_s(192), ifb_l(25, 0:2), ifb_s(25, 0:2)
     !
 contains
@@ -155,7 +155,7 @@ contains
     subroutine mid_side_fft(mpg, mblock_type) ! iso  c.2.4.3.4.9.2,  g.2 ms_stereo and intensity stereo coding layer iii
         type (mpeg_parameters), intent(in out) :: mpg
         integer               , intent(in    ) :: mblock_type(:, :)
-        integer          :: igranule, nchannel, n0, n1
+        integer          :: igranule, nchannel
         real (kind = kd) :: cos_t, x1, x2
         integer, save :: mode_old = 0, mode_ext_old = 0
         logical       :: qms
@@ -273,7 +273,7 @@ contains
         !..... fft 576/192 ............................................................................................
         nchannel = size(mblock_type, 2) 
         call fft_long (nchannel, pcm, afft_l, arg_l, cfft_l)
-        call fft_short(nchannel, pcm, afft_s, arg_s, cfft_s)
+        !call fft_short(nchannel, pcm, afft_s, arg_s, cfft_s)
         !..... weighted intensity .....................................................................................
         call calc_wx(nchannel, wx)
         !..... attack detection .......................................................................................
@@ -328,14 +328,8 @@ contains
         !
         do i = 1, 576
             do j = 1, 576
-                dbsf_l(i, j) = spreading_function( bark_l(i) - bark_l(j) )  
-                sf_l(i, j) = 10.0_kd ** ( dbsf_l(i, j) / 20.0_kd ) 
-            end do
-        end do 
-        do i = 1, 192
-            do j = 1, 192
-                dbsf_s(i, j) = spreading_function( bark_s(i) - bark_s(j) )
-                sf_s(i, j) = 10.0_kd ** ( dbsf_s(i, j) / 20.0_kd ) 
+                dbsf_l(i, j) = spreading_function0( bark_l(i) - bark_l(j) )  
+                sf_l(i, j) = 10.0_kd ** ( dbsf_l(i, j) / 10.0_kd ) 
             end do
         end do 
     end subroutine init_mask
@@ -351,7 +345,6 @@ contains
         real (kind = kd), save :: arg1_l(576, 2) = 0.0_kd, arg2_l(576, 2) = 0.0_kd, arg3_l(576, 2) = 0.0_kd
         real (kind = kd), save :: err1_l(576, 2) = 0.0_kd, err2_l(576, 2) = 0.0_kd, errm_l(576, 2) = 0.0_kd
         integer :: icritical_band, iwin, iband, i, j
-        real (kind = kd) :: tmp1
         !---------------------------------------------------------------------------------------------
         ! masking / allowed noise : reference Bosse Lincoln "an experimental high fidelity perceptual audio coder project in mus420 win 97"
         !---------------------------------------------------------------------------------------------
@@ -367,28 +360,25 @@ contains
         end forall
         tone_l = 1.0_kd - max(err1_l(:, ichannel), err2_l(:, ichannel), errm_l(:, ichannel) )  
         !
-        ! mask for long block
-        fk_l =  0.3_kd * tone_l +  0.5_kd * (1 - tone_l) 
-        fl_l = 34.0_kd * tone_l + 20.0_kd * (1 - tone_l) 
+        ! tonality mask; empirical factor  
+!        fk_l =  0.3_kd * tone_l +  0.5_kd * (1 - tone_l) ! Lincoln
+!        fl_l = 34.0_kd * tone_l + 20.0_kd * (1 - tone_l) 
+        fk_l =  0.4_kd * tone_l +  0.5_kd * (1 - tone_l) ! enhance tonality
+        fl_l = 40.0_kd * tone_l + 20.0_kd * (1 - tone_l) 
+        ! 
         if (.not. q_pnorm) then
             ! 1-norm 1 
-            forall(i = 1:576, j = 1:576) sf(i, j) = sf_l(i, j) * 10.0_kd **(-fk_l(i) * bark_l(j) / 20.0_kd)
-            tn_l = 10.0_kd**( - ( fl_l - offset_l - weight_l) / 20.0_kd ) ! [dB]
-            x0_l = matmul(sf, afft_l(:, igranule, ichannel)**2) * tn_l 
-        else               
-            dbfft_l = 20.0_kd * log10(afft_l)
+            forall (i = 1:576, j = 1:576) sf(i, j) = sf_l(i, j) * 10.0_kd **(-fk_l(i) * bark_l(j) / 10.0_kd)
+            tn_l = 10.0_kd**( ( -fl_l + offset_l + weight_l) / 10.0_kd ) ! [dB]
+            x0_l = matmul(sf, afft_l(:, igranule, ichannel)) * tn_l 
+        else     
+            ! p-norm          
+            dbfft_l = 10.0_kd * log10(afft_l)
             do i = 1, 576
-                tn_l = 2 * dbfft_l(:, igranule, ichannel)  + dbsf_l(i, :) - fk_l(i) * bark_l  - fl_l(i) + weight_l ![dB]
-                ! 1-norm 2
-!                x0_l(i) = sum( 10.0_kd**(tn_l - offset_l/ 20.0_kd) )  
-                ! 2/3-norm
-!                tmp1 = sum( 10.0_kd**(tn_l / 30.0_kd) )
-!                x0_l(i) = sqrt(tmp1)*tmp1*fctr  
-                ! 1/2-norm
-!                tmp1 = sum( 10.0_kd**(tn_l / 40.0_kd) )
-!                x0_l(i) = tmp1*tmp1*fctr
-                ! p-norm  
-                 x0_l(i) = sum( 10.0_kd**(tn_l * pow / 20.0_kd) )**( 1.0_kd / pow) * 10.0_kd**(offset_l / 20.0_kd)  
+!                tn_l = dbfft_l(:, igranule, ichannel)  + dbsf_l(i, :) - fk_l(i) * bark_l - fl_l(i) + weight_l ![dB]
+!                x0_l(i) = sum( 10.0_kd**(tn_l * pow / 10.0_kd) )**( 1.0_kd / pow) * 10.0_kd**( / 10.0_kd)  
+                tn_l = dbfft_l(:, igranule, ichannel)  + dbsf_l(i, :) - fk_l(i) * bark_l - fl_l(i) + offset_l + weight_l ![dB]
+                x0_l(i) = sum( 10.0_kd**(tn_l * pow / 10.0_kd) )**( 1.0_kd / pow) 
             end do
         end if
         !
@@ -398,6 +388,7 @@ contains
         !
         ! allowed noise : average mask over a critical band
         do icritical_band = 1, 25
+!            yn(icritical_band) = minval( x0_l(ifb_l(icritical_band, 1):ifb_l(icritical_band, 2)) ) 
             yn(icritical_band) = sum( x0_l(ifb_l(icritical_band, 1):ifb_l(icritical_band, 2)) ) &
                                     / real(ifb_l(icritical_band, 0), kind = kd)
         end do
@@ -414,19 +405,27 @@ contains
             forall (iband = 1:32, i = 1:18) xnoise(iband, i) = y_l(18 * (iband - 1) + i) 
         case (20) ! short block
             forall (iband = 1:32, iwin = 1:3, i = 1:6) 
-                xmask (iband, 6 * (iwin - 1) + i) = minval(x_l(18 * (iband - 1) + 6 * (i - 1) + 1  &
-                                                              :18 * (iband - 1) + 6 * (i - 1) + 3  ) )
-                xnoise(iband, 6 * (iwin - 1) + i) = minval(y_l(18 * (iband - 1) + 6 * (i - 1) + 1  &
-                                                              :18 * (iband - 1) + 6 * (i - 1) + 3  ) )
+!                xmask (iband, 6 * (iwin - 1) + i) = minval(x_l(18 * (iband - 1) + 3 * (i - 1) + 1  &
+!                                                              :18 * (iband - 1) + 3 * (i - 1) + 3  ) )
+!                xnoise(iband, 6 * (iwin - 1) + i) = minval(y_l(18 * (iband - 1) + 3 * (i - 1) + 1  &
+!                                                              :18 * (iband - 1) + 3 * (i - 1) + 3  ) )
+                xmask (iband, 6 * (iwin - 1) + i) = sum(x_l(18 * (iband - 1) + 3 * (i - 1) + 1  &
+                                                           :18 * (iband - 1) + 3 * (i - 1) + 3  ) ) / 3.0_kd
+                xnoise(iband, 6 * (iwin - 1) + i) = sum(y_l(18 * (iband - 1) + 3 * (i - 1) + 1  &
+                                                           :18 * (iband - 1) + 3 * (i - 1) + 3  ) ) / 3.0_kd
             end forall 
         case (21) ! mixed block   
             forall (iband = 1: 2, i = 1:18) xmask (iband, i) = x_l(18 * (iband - 1) + i) 
             forall (iband = 1: 2, i = 1:18) xnoise(iband, i) = y_l(18 * (iband - 1) + i)
             forall (iband = 3:32, iwin = 1:3, i = 1:6) 
-                xmask (iband, 6 * (iwin - 1) + i) = minval(x_l(18 * (iband - 1) + 6 * (i - 1) + 1  &
-                                                              :18 * (iband - 1) + 6 * (i - 1) + 3  ) )
-                xnoise(iband, 6 * (iwin - 1) + i) = minval(y_l(18 * (iband - 1) + 6 * (i - 1) + 1  &
-                                                              :18 * (iband - 1) + 6 * (i - 1) + 3  ) )
+!                xmask (iband, 6 * (iwin - 1) + i) = minval(x_l(18 * (iband - 1) + 3 * (i - 1) + 1  &
+!                                                              :18 * (iband - 1) + 3 * (i - 1) + 3  ) )
+!                xnoise(iband, 6 * (iwin - 1) + i) = minval(y_l(18 * (iband - 1) + 3 * (i - 1) + 1  &
+!                                                              :18 * (iband - 1) + 3 * (i - 1) + 3  ) )
+                xmask (iband, 6 * (iwin - 1) + i) = sum(x_l(18 * (iband - 1) + 3 * (i - 1) + 1  &
+                                                           :18 * (iband - 1) + 3 * (i - 1) + 3  ) ) / 3.0_kd
+                xnoise(iband, 6 * (iwin - 1) + i) = sum(y_l(18 * (iband - 1) + 3 * (i - 1) + 1  &
+                                                           :18 * (iband - 1) + 3 * (i - 1) + 3  ) ) / 3.0_kd
             end forall 
         case default
             print *, 'mblock_type', mblock_type
@@ -434,9 +433,9 @@ contains
         end select
         !
         ! save old data
-        arg3_l(:, ichannel) = arg2_l(:, ichannel)
-        arg2_l(:, ichannel) = arg1_l(:, ichannel)
-        arg1_l(:, ichannel) = arg_l (:, igranule, ichannel)
+        arg3_l (:, ichannel) = arg2_l(:, ichannel)
+        arg2_l (:, ichannel) = arg1_l(:, ichannel)
+        arg1_l (:, ichannel) = arg_l (:, igranule, ichannel)
         afft_l0(:, ichannel) = afft_l(:, igranule, ichannel) 
     end subroutine calc_mask
  !------------------------------------------------------------------------------------------------
@@ -456,7 +455,7 @@ contains
         real (kind = kd), intent(in) :: z
         real (kind = kd) :: res
         if ( z > 0.0_kd ) then
-            res = -25.0_kd * z 
+            res = -20.0_kd * z 
         else
             res =  75.0_kd * z 
         end if

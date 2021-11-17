@@ -82,7 +82,7 @@ contains
                 if ( iarg >= narg ) call option_error( trim(buffer) )
                 call get_command_argument(iarg, buffer, istatus)
                 write(fmt, '(a, i1, a)') '(f', istatus, '.0)' 
-                read(buffer, fmt) tempo_l
+                read(buffer, fmt) tempo_l  
             case ('-pow') 
                 iarg = iarg + 1
                 if ( iarg >= narg ) call option_error( trim(buffer) )
@@ -111,8 +111,6 @@ contains
                     write(*, *) 'input out of range: skip >= 1.0'
                     call option_error( trim(buffer) )
                 end if
-            case ('-cuth') 
-                cut_factor = 0.0_kd 
             case ('-l') 
                 mblock_type_param = 0
             case ('-s') 
@@ -164,7 +162,6 @@ contains
         write(*, *) '       -c           copyright flag on                    (default off)'
         write(*, *) '       -o           original  flag on                    (default off)'
         write(*, *) '       -cut 1..32   band cut-off : place after -b option (default 32: 22.05khz)'
-        write(*, *) '       -cuth        cuts band 21 (l) or 12 (s/m)         (default off) '
         write(*, *) '       -l           long-block-only                      (default off)'
         write(*, *) '       -s           short-mode for short-block           (default off)'
         write(*, *) '       -m           mixed-mode for short-block           (default off)'
@@ -177,9 +174,9 @@ contains
         write(*, *) '       -nomask      masking off                          (default on)'
         write(*, *) '       -ath_min xx  minimum of ath  [ db ]               (default -150.0)'
         write(*, *) '       -ath_max xx  ceiling of ath  [ db ]               (default 0.0)'
-        write(*, *) '       -offset  xx  offset for mask [ db ] +20db=0.1x    (defaul -50.0)'
-        write(*, *) '       -tempo_l xx  temporal masking factor              (default 0.85)'
-        write(*, *) '       -pow     xx  p-norm                               (defaul  0.5)'
+        write(*, *) '       -offset  xx  offset for mask [ db ] +10db=0.1x    (defaul -33.0)'
+        write(*, *) '       -tempo xx    temporal masking factor              (default 0.85)'
+        write(*, *) '       -pow     xx  p-norm                               (defaul  0.3)'
         write(*, *) '       -1norm       1-norm                               (defaul  off)'
         write(*, *) '       -noalias     anti-alias for mixed-block off       (default on)'
         write(*, *) '       -debug       print debug info                     (default on) '
