@@ -13,7 +13,7 @@ contains
 !---------------------------------------------------------------------
     subroutine abend(text)
         character (len = *), intent(in) :: text
-        write(*, *) 'abend:: ', text
+        write(*, *) 'abnormal end:: ', text
         stop
     end subroutine abend
 !-------------------------------------------------------------------

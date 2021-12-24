@@ -4,7 +4,7 @@ module wav_io
     implicit none
     private
     public :: riff_chunk, fmt_chunk, data_chunk              ! type
-    public :: check_riff_chunk, open_wav_file, close_wav_file, read_pcm_1frame, read_pcm0 ! subroutine
+    public :: check_riff_chunk, open_wav_file, close_wav_file, read_pcm_1frame!, read_pcm0 ! subroutine
     integer, save :: ir
     !
     type :: fmt_chunk
@@ -76,11 +76,11 @@ contains
         ires = transfer(word16(), ires) ! little endian assumed
     end function int16
 !---------------------------------------------------------------------
-    subroutine abort(text)
+    subroutine abend(text)
         character (len = *), intent(in) :: text
-        write(*, *) 'abort:: ', text
+        write(*, *) 'abnormal end:: ', text
         stop
-    end subroutine abort
+    end subroutine abend
 !------------------------------------------------------------------
     subroutine open_wav_file(iread, fname)
         integer            , intent(in    ) :: iread
@@ -90,7 +90,7 @@ contains
         open(ir, file = fname, status = 'old', iostat = io, access = 'stream') ! f2003
         if (io /= 0) then
             write(*, '(a, i3, a, i3, 2a)' ) ' i/o error ', io, ' occuerred. file =', iread, ' file name ', fname
-            call abort('check input file! suggestion: is file name correct?')
+            call abend('file open error: check input file!')
         end if
     end subroutine open_wav_file
 !------------------------------------------------------------------
@@ -104,14 +104,14 @@ contains
         if ( word32() == riff%chunk_id ) then    ! 'riff'?
             write(*, '(a)', advance = 'no') ' MS RIFF '
         else
-            call abort('this is not MS RIFF file!')
+            call abend('this is not MS RIFF file!')
         end if
         riff%ichunk_size = int32()
         if ( word32() == riff%format_type ) then ! 'wave'?
             write(*, '(a)', advance = 'no') 'WAV audio '
         else
             write(*, *)
-            call abort('this is not wav file!')
+            call abend('this is not wav file!')
         end if
         call check_fmt_chunk(riff%fmt)
         call check_dat_chunk(riff%dat, riff%fct)
@@ -119,7 +119,7 @@ contains
 !------------------------------------------------------------------
     subroutine check_fmt_chunk(fmt)
         type (fmt_chunk), intent(in out) :: fmt
-        if ( word32() /= fmt%chunk_id ) call abort('cannot find format chunk!')
+        if ( word32() /= fmt%chunk_id ) call abend('cannot find format chunk!')
         fmt%ichunk_size      =     int32()
         fmt%iformat_type     = int(int16(), kind = 4)
         fmt%ichannels        = int(int16(), kind = 4)
@@ -127,8 +127,8 @@ contains
         fmt%ibytes_per_sec   =     int32()
         fmt%iblock_size      = int(int16(), kind = 4)
         fmt%ibits_per_sample = int(int16(), kind = 4)
-        if ( fmt%iformat_type     /=  1) call abort('unknown wave format!') !linear pcm
-        if ( fmt%ibits_per_sample /= 16) call abort('not 16bit data!')
+        if ( fmt%iformat_type     /=  1) call abend('unknown wave format!') !linear pcm
+        if ( fmt%ibits_per_sample /= 16) call abend('not 16bit data!')
         select case ( fmt%ichannels )
         case (1)
             write(*, '(a, i3, a, i6, a)', advance = 'no') &
@@ -138,7 +138,7 @@ contains
              'stereo' , fmt%ibits_per_sample, 'bit sampling rate', fmt%isamples_per_sec, 'hz '
         case default
             write(*, '(a, i1)') ' number of wave channels is ', fmt%ichannels
-            call abort('wave channel must be 1 or 2!')
+            call abend('wave channel must be 1 or 2!')
         end select
     end subroutine check_fmt_chunk
 !------------------------------------------------------------------
@@ -172,7 +172,7 @@ contains
         else if ( chnk_id == dat%chunk_id ) then
             dat%ichunk_size = int32()
         else
-            call abort('cannot find fact chunk nor data chunk!')
+            call abend('cannot find fact chunk nor data chunk!')
         end if
     end subroutine check_dat_chunk
 !------------------------------------------------------------------
@@ -186,7 +186,7 @@ contains
         equivalence (cbuff16, ibuff16)
         ndat     = size(pcm, 1)
         nchannel = size(pcm, 2)
-        if (ndat * nchannel > maxbuff) call abort('check maxbuff: subroutine wav_get')
+        if (ndat * nchannel > maxbuff) call abend('check maxbuff: subroutine wav_get')
         ibuff16 = 0
         select case (nchannel)
         case (1) !mono
@@ -202,7 +202,7 @@ contains
                 pcm(i, 2) = real( ibuff16(2 * i    ), kind = kd) / denom  ! little endian assumed
             end do
         case default
-            call abort('ichannel must be 1 or 2: subroutine wav_get')
+            call abend('ichannel must be 1 or 2: subroutine wav_get')
         end select
     end subroutine wav_read
 !------------------------------------------------------------------
@@ -218,19 +218,14 @@ contains
         !  write(*, *) 'end of file!'
         case default
             write(*, '(a, i3, a, i4)') ' file ', ir, ' iostat ', io
-            call abort('i/o error occurred while reading wav file.')
+            call abend('I/O error occurred while reading wav file.')
         end select
     end subroutine wav_read_sub
 !------------------------------------------------------------------
     subroutine read_pcm_1frame(pcm)
         real (kind = kd), intent(out) :: pcm(:, :)
         pcm = eoshift(pcm, 1152, 0.0_kd, 1)
-        call wav_read(pcm(481:1632, :))
+        call wav_read(pcm(1153:2304, :))
     end subroutine read_pcm_1frame
-!------------------------------------------------------------------
-    subroutine read_pcm0(pcm)
-        real (kind = kd), intent(out) :: pcm(:, :)
-        call wav_read(pcm(1153:1632, :))
-    end subroutine read_pcm0
 !------------------------------------------------------------------
 end module wav_io

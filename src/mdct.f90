@@ -51,16 +51,15 @@ contains
         real (kind = kd), intent(in ) :: subband(:, :, :) ! 32 * 36 * nchannel
         real (kind = kd), intent(out) :: subbuff(:, :, :) ! 32 * 54 * nchannel
         subbuff = eoshift(subbuff, 36, 0.0_kd, 2)
-        subbuff(:     , 19:54  , :) =  subband(:, :, :)           
+        subbuff(:     , 19:54  , :) =  subband(:, :, :)            ! C.1.5.3.3  ! ISO 2.4.3.4.10.5
         subbuff(2:32:2, 20:54:2, :) = -subbuff(2:32:2, 20:54:2, :) ! ISO figure A.4 layer III decoder diagram
-                                                 !    ~~~~~~~~~~~~ not written in the text but only in figure 
     end subroutine cp_subband
 !--------------------------------------------------------------------------------------------------
     subroutine sub_mdct(subband, r_mdct, mblock_type, q_alias)
         real (kind = kd), intent(in ) :: subband(:, :, :)
         real (kind = kd), intent(out) :: r_mdct (:, :, :, :)
-        integer        , intent(in ) :: mblock_type(:)
-        logical        , intent(in ) :: q_alias 
+        integer         , intent(in ) :: mblock_type(:, :)
+        logical         , intent(in ) :: q_alias 
         integer :: igranule, ichannel
         logical, save :: qfirst = .true.
         if (qfirst) then
@@ -72,7 +71,7 @@ contains
         call cp_subband(subband, subbuff)
         do ichannel = 1, size(subband, 3)
             do igranule = 1, 2
-                select case (mblock_type(igranule))
+                select case (mblock_type(igranule, ichannel))
                 case ( 0) ! long block 
                     call sub_mdct_normal(igranule, 1, 32, subbuff(:, :, ichannel), r_mdct(:, :, igranule, ichannel))
                     call anti_alias(r_mdct(1:32, :, igranule, ichannel))
@@ -94,7 +93,7 @@ contains
                     call sub_mdct_short(igranule, 1, 32, subbuff(:, :, ichannel), r_mdct(:, :, igranule, ichannel))
                 case (21) ! short block : mixed mode
                     call sub_mdct_normal(igranule, 1,  2, subbuff(:, :, ichannel), r_mdct(:, :, igranule, ichannel))
-                call sub_mdct_short (igranule, 3, 32, subbuff(:, :, ichannel), r_mdct(:, :, igranule, ichannel))
+                    call sub_mdct_short (igranule, 3, 32, subbuff(:, :, ichannel), r_mdct(:, :, igranule, ichannel))
                     if (q_alias) call anti_alias(r_mdct(1:2, :, igranule, ichannel))
                 case default
                     stop 'error : subroutine sub_mdct : block_type error'
@@ -104,7 +103,7 @@ contains
     end subroutine sub_mdct
 !--------------------------------------------------------------------------------------------------
     subroutine sub_mdct_normal(igranule, n0, n1, subbuff, r_mdct)
-        integer        , intent(in ) :: igranule, n0, n1 
+        integer         , intent(in ) :: igranule, n0, n1 
         real (kind = kd), intent(in ) :: subbuff(:, :)
         real (kind = kd), intent(out) :: r_mdct (:, :)
         real (kind = kd)              :: wk(36)
@@ -117,7 +116,7 @@ contains
     end subroutine sub_mdct_normal
 !--------------------------------------------------------------------------------------------------
     subroutine sub_mdct_start(igranule, n0, n1, subbuff, r_mdct)
-        integer        , intent(in ) :: igranule, n0, n1 
+        integer         , intent(in ) :: igranule, n0, n1 
         real (kind = kd), intent(in ) :: subbuff(:, :)
         real (kind = kd), intent(out) :: r_mdct (:, :)
         real (kind = kd)              :: wk(36)
@@ -130,7 +129,7 @@ contains
     end subroutine sub_mdct_start
 !--------------------------------------------------------------------------------------------------
     subroutine sub_mdct_stop(igranule, n0, n1, subbuff, r_mdct)
-        integer        , intent(in ) :: igranule, n0, n1 
+        integer         , intent(in ) :: igranule, n0, n1 
         real (kind = kd), intent(in ) :: subbuff(:, :)
         real (kind = kd), intent(out) :: r_mdct (:, :)
         real (kind = kd)              :: wk(36)
@@ -243,8 +242,8 @@ contains
 !-----------------------------------------------------------------------
     subroutine mdct12(x_in, x_out)
         real (kind = kd), intent(in ) :: x_in (:) ! 12
-        real (kind = kd), intent(out) :: x_out(:) !  6
-        real (kind = kd):: x_shift(12), x_re, x_im  
+        real    (kind = kd), intent(out) :: x_out(:) !  6
+        real    (kind = kd):: x_shift(12), x_re, x_im  
         complex (kind = kd):: fft(3)
         integer:: i  
         x_shift( 1: 3) = -x_in(10:12)

@@ -4,6 +4,7 @@ module mod_encode
     use mod_layer3
     use mod_huffman
     use mod_crc
+    implicit none
     private
     public encode_all
 contains
@@ -151,7 +152,7 @@ contains
                         call put_bits_dim2(n, scfct(igranule, ichannel)%ishort(6:11, 1:3))
                     end if
                 else ! long block
-                    if (side_info%iscfsi(1, ichannel) == 0 .or. igranule == 1) then
+                    if (side_info%iscfsi(1, ichannel) == 0 .or. igranule == 1) then !??????????
                         n = len_scale_compress(side_info%sub(igranule, ichannel)%iscalefac_compress, 1) 
                         call put_bits_dim(n, scfct(igranule, ichannel)%long( 0: 5))
                     end if 
@@ -232,7 +233,8 @@ contains
                 stop 'error : encode_big_region : mixed_block_flag '
             end if
         case default
-            stop 'error : encode_big_region : iblock_type '
+            write(*, *) 'error : encode_big_region : iblock_type ', side_info%sub(igranule, ichannel)%iblock_type 
+            stop 
         end select
     end subroutine encode_big_region
 !-------------------------------------------------------------------

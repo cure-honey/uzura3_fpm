@@ -193,8 +193,8 @@ contains
         integer, intent(in ) :: ibigvalues
         integer, intent(out) :: iregion0, iregion1
         integer :: n0, n1, i
-        n0 = 2 * ibigvalues * r0
-        n1 = 2 * ibigvalues * r1  
+        n0 = int(2 * ibigvalues * r0)
+        n1 = int(2 * ibigvalues * r1)
         ! division suggested in iso document c.1.5.4.4.6 is 1/3 : 5/12 : 1/4     
         do i = 0, 20
             if ( n0 >= iscalefactorband_l(i, 3) ) iregion0 = min( 15, max( 0, i               ) ) 
@@ -271,8 +271,8 @@ contains
             end select    
         else
             do i = 16, 23
-                if (imax <= huff(i)%linmax) then 
-                    itab1 = i
+                if (imax <= huff(i)%linmax) then! + 15 ?
+                     itab1 = i
                     exit
                 end if
             end do

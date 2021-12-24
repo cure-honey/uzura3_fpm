@@ -65,30 +65,31 @@ module mod_mpg
                          0, 1, 2, 3, 0, 1, 2, 3, 1, 2, 3, 1, 2, 3, 2, 3  /), (/16, 2/) )
     integer, save :: iscalefactorband_l(0:20, 3), iscalefactorband_s(0:11, 3) ! public
 !-------------------------------------------------------------------------------------------
-!Global variables
+!Global Variables
     !debug variables
     real (kind = kd), save :: tot_sc_l(0:20) = 0.0_kd, tot_sc_s(0:11, 3) = 0.0_kd
     integer, save :: m1 = 0, m3 = 0, mix = 0, long = 0, nshort = 0, ntable(0:31) = 0, ntab_ab(0:1) = 0
     integer, save :: ms = 0, ns = 0, ns1 = 0, ns2 = 0, nn1 = 0, nn2 = 0, nbits(14)
     integer, save :: n_sc_l = 0, n_sc_s = 0, n_sub_gain = 0, n_scale = 0, n_emph = 0
-    real (kind = kd), save :: distortion_max = 0.0_kd   ! debug info 
+    integer, save :: iframe ! main.f90   
+    real (kind = kd), save :: distortion_max = 0.0_kd    ! debug info 
+    real (kind = kd), save :: cut_factor = 1.0_kd        ! band cut
     !-------------------------------------------------------------------------------------------
-    !system parameters
+    !system parameters 
     ! switches
-    logical, save :: qms_stereo = .true., q_alias = .true., q_pnorm = .true., q_mask = .true., q_sm = .true., q_info = .true.
+    logical, save :: qms_stereo = .true., q_alias = .true., q_mask = .true., q_sm = .true., q_info = .true., q_inner = .false.
+    logical, save :: q_short_fft = .true., q_help = .false.  
     ! parameters
     integer         , save :: icut = 32                  ! cut at 24 16.5khz; 25 17.2khz; 26 17.9khz; 27 18.6khz
     integer         , save :: mblock_type_param = 20     ! default short block! long = 0, short = 20, mixed = 21
-    real (kind = kd), save :: ath_min   = -150.0_kd      ! offset  for ath  90.3db = 2^-15 16bit wav pcm assumed   
-    real (kind = kd), save :: ath_max   =  100.0_kd      ! ceiling for ath                    (see init_absolute_threshold inpsycho.f90) 
+    real (kind = kd), save :: ath_min   = -119.0_kd ![db]! offset  for ath  93.3db 2^-(15*2+1) 16bit wav pcm assumed   
+    real (kind = kd), save :: ath_max   =  100.0_kd ![db]! ceiling for ath                    (see init_absolute_threshold inpsycho.f90) 
     real (kind = kd), save :: switch    =    2.0_kd      ! long/short window switching factor (see switch_q in psycho.f90)
+    real (kind = kd), save :: xsm       =    2.0_kd      ! short/mixed switching factor       (see switch_q in psycho.f90)
     real (kind = kd), save :: xms       =    0.5_kd      ! ns/ms switching factor             (see mid_side in layer3.f90)
-    real (kind = kd), save :: xsm       =    1.5_kd      ! short/mixed switching factor       (see mid_side in layer3.f90)
-    real (kind = kd), save :: offset_l  =  -33.0_kd ![db]! offset for masking [long]          (see psycho in psycho.f90)
-    real (kind = kd), save :: tempo_l   =   0.85_kd      ! temporal masking parameter [long]  (see psycho in psycho.f90)
-    real (kind = kd), save :: pow       =    0.3_kd      ! spreading p-norm           [long]  (see psycho in psycho.f90)
+    real (kind = kd), save :: offset_l  =  -38.0_kd ![db]! offset for masking                 (see psycho in psycho.f90)
+    real (kind = kd), save :: pow       =    0.3_kd      ! spreading p-norm                   (see psycho in psycho.f90)
     real (kind = kd), save :: skip      =   10.0_kd      ! exit outer loop if distortion increased by factor of skip  
     real (kind = kd), save :: r0 = 0.33_kd, r1 = 0.75_kd ! iso suggests r0 = 0.33_kd, r1 = 0.75_kd (see layer3.f90)
-    real (kind = kd), save :: cut_factor = 1.0_kd        ! cuth
 !-------------------------------------------------------------------------------------------
 end module mod_mpg
